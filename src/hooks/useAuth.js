@@ -5,20 +5,23 @@ import { auth, db } from '../firebase.js'
 
 export function useAuth() {
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(null) // 'hansen' | 'lavita'
+  const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-        setRole(snap.exists() ? snap.data().role : null)
-        setUser(firebaseUser)
-      } else {
-        setUser(null)
-        setRole(null)
+      try {
+        if (firebaseUser) {
+          const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
+          setUser(firebaseUser)
+          setRole(snap.exists() ? snap.data().role : null)
+        } else {
+          setUser(null)
+          setRole(null)
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsub
   }, [])

@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useAuth } from '../hooks/useAuth.js'
+import { useNavigate } from 'react-router-dom'
+import { useAuthContext } from '../contexts/AuthContext.jsx'
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login } = useAuthContext()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -12,6 +14,7 @@ export default function LoginPage() {
     setError('')
     try {
       await login(email, password)
+      navigate('/')
     } catch {
       setError('Invalid email or password')
     }
