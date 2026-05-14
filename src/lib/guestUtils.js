@@ -3,7 +3,7 @@
  * Returns override if set, otherwise max tag weight for userId, or 5 if no tags.
  */
 export function calcWeight(tagIds, userId, tags, weightOverride, overrideValue) {
-  if (weightOverride && overrideValue !== null) return overrideValue
+  if (weightOverride && overrideValue != null) return overrideValue
   if (!tagIds || tagIds.length === 0) return 5
   const weights = tagIds
     .map(id => tags.find(t => t.id === id))
@@ -19,7 +19,7 @@ export function calcWeight(tagIds, userId, tags, weightOverride, overrideValue) 
 export function findDuplicates(name, currentUserId, allGuests) {
   const normalized = name.trim().toLowerCase()
   return allGuests.filter(
-    g => g.name.trim().toLowerCase() === normalized && g.ownerId !== currentUserId
+    g => g.name?.trim().toLowerCase() === normalized && g.ownerId !== currentUserId
   )
 }
 
@@ -42,14 +42,14 @@ export function deduplicateForCombined(guests) {
       existing.shared = true
       existing.weight = Math.max(existing.weight, guest.weight)
       existing.owners.push(guest.ownerId)
-      existing.allTags = [...existing.allTags, ...guest.tags.map(t => ({ tagId: t, ownerId: guest.ownerId }))]
-      existing.rsvp.confirmed = existing.rsvp.confirmed || guest.rsvp.confirmed
+      existing.allTags = [...existing.allTags, ...(guest.tags ?? []).map(t => ({ tagId: t, ownerId: guest.ownerId }))]
+      existing.rsvp.confirmed = existing.rsvp.confirmed || guest.rsvp?.confirmed
     } else {
       const entry = {
         ...guest,
         shared: false,
         owners: [guest.ownerId],
-        allTags: guest.tags.map(t => ({ tagId: t, ownerId: guest.ownerId })),
+        allTags: (guest.tags ?? []).map(t => ({ tagId: t, ownerId: guest.ownerId })),
       }
       seen.set(key, entry)
       result.push(entry)

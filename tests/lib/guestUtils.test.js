@@ -23,6 +23,10 @@ describe('calcWeight', () => {
   it('returns 5 when no tags selected', () => {
     expect(calcWeight([], 'u1', mockTags, false, null)).toBe(5)
   })
+
+  it('returns max tag weight when weightOverride is true but overrideValue is undefined', () => {
+    expect(calcWeight(['t1'], 'u1', mockTags, true, undefined)).toBe(9)
+  })
 })
 
 describe('findDuplicates', () => {
@@ -65,6 +69,18 @@ describe('deduplicateForCombined', () => {
     const result = deduplicateForCombined(guests)
     expect(result).toHaveLength(2)
     expect(result.every(g => !g.shared)).toBe(true)
+  })
+
+  it('merges guests with linkedGuestId pointing to each other into one shared entry', () => {
+    const guests = [
+      { id: 'g1', name: 'Alice', ownerId: 'u1', tags: ['t1'], weight: 9, linkedGuestId: 'g2', rsvp: { confirmed: false } },
+      { id: 'g2', name: 'Alice', ownerId: 'u2', tags: ['t2'], weight: 7, linkedGuestId: 'g1', rsvp: { confirmed: true } },
+    ]
+    const result = deduplicateForCombined(guests)
+    expect(result).toHaveLength(1)
+    expect(result[0].shared).toBe(true)
+    expect(result[0].weight).toBe(9)
+    expect(result[0].rsvp.confirmed).toBe(true)
   })
 })
 
