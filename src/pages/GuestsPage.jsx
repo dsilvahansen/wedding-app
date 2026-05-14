@@ -19,6 +19,7 @@ export default function GuestsPage() {
   return (
     <div className="h-screen flex flex-col">
       <TopBar title="Guest List" />
+      <div className="flex-1 flex flex-col overflow-hidden">
       <ModuleLayout tabs={TABS}>
         <Routes>
           <Route index element={<AddGuest />} />
@@ -29,6 +30,7 @@ export default function GuestsPage() {
           <Route path="*" element={<Navigate to="/guests" replace />} />
         </Routes>
       </ModuleLayout>
+      </div>
       <BottomNav />
     </div>
   )

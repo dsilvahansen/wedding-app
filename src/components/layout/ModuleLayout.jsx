@@ -8,8 +8,7 @@ export default function ModuleLayout({ tabs, children }) {
     <div className="flex flex-col h-full">
       <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
         {tabs.map(tab => {
-          const active = location.pathname === tab.path ||
-            (tab.path.endsWith('/guests') && location.pathname === '/guests')
+          const active = location.pathname === tab.path
           return (
             <button
               key={tab.path}
