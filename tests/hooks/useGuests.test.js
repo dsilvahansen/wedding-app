@@ -4,7 +4,6 @@ import { vi, describe, it, expect } from 'vitest'
 vi.mock('../../src/firebase.js', () => ({ db: {} }))
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
-  query: vi.fn(),
   onSnapshot: vi.fn((q, cb) => {
     cb({ docs: [] })
     return () => {}
