@@ -12,6 +12,11 @@ export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpTog
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
           <span className="font-medium text-sm truncate">{guest.name}</span>
+          {guest.isGroup && (
+            <span className="text-xs text-gray-500 font-medium">
+              ({(guest.adultCount ?? 0) + (guest.kidCount ?? 0)})
+            </span>
+          )}
           {badge && (
             <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={badge.style}>{badge.label}</span>
           )}

@@ -40,4 +40,22 @@ describe('GuestRow', () => {
     fireEvent.click(screen.getByText('John Smith'))
     expect(onEdit).not.toHaveBeenCalled()
   })
+
+  it('renders name with headcount for group guest', () => {
+    const groupGuest = {
+      ...guest,
+      name: 'Smith family',
+      isGroup: true,
+      adultCount: 2,
+      kidCount: 1,
+    }
+    render(<GuestRow guest={groupGuest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} />)
+    expect(screen.getByText('Smith family')).toBeInTheDocument()
+    expect(screen.getByText('(3)')).toBeInTheDocument()
+  })
+
+  it('does not render count for non-group guest', () => {
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} />)
+    expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument()
+  })
 })
