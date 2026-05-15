@@ -1,5 +1,6 @@
 import TagPill from './TagPill.jsx'
 import RsvpIcons from './RsvpIcons.jsx'
+import { getTotalHeadcount } from '../../lib/guestUtils.js'
 
 export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpToggle, onEdit, badge }) {
   const guestTags = (guest.tags || []).map(id => tags.find(t => t.id === id)).filter(Boolean)
@@ -14,7 +15,7 @@ export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpTog
           <span className="font-medium text-sm truncate">{guest.name}</span>
           {guest.isGroup && (
             <span className="text-xs text-gray-500 font-medium">
-              ({(guest.adultCount ?? 0) + (guest.kidCount ?? 0)})
+              ({getTotalHeadcount(guest)})
             </span>
           )}
           {badge && (
