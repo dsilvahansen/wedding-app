@@ -1,1 +1,213 @@
-export default function AddGuest() { return <div className="p-4 text-sm text-gray-500">Add tab — coming in Task 7</div> }
+import { useState, useRef, useEffect } from 'react'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../firebase.js'
+import { useAuth } from '../../hooks/useAuth.js'
+import { useGuests } from '../../hooks/useGuests.js'
+import { useTags } from '../../hooks/useTags.js'
+import { calcWeight, findDuplicates } from '../../lib/guestUtils.js'
+import TagPill from '../ui/TagPill.jsx'
+import Toast from '../ui/Toast.jsx'
+
+export default function AddGuest() {
+  const { user, role } = useAuth()
+  const { guests } = useGuests()
+  const { tags } = useTags()
+
+  const [name, setName] = useState('')
+  const [selectedTags, setSelectedTags] = useState([])
+  const [weightOverride, setWeightOverride] = useState(false)
+  const [overrideValue, setOverrideValue] = useState(null)
+  const [editingWeight, setEditingWeight] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [addingTag, setAddingTag] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [suggestions, setSuggestions] = useState([])
+  const [duplicateWarning, setDuplicateWarning] = useState(null)
+  const [linkedGuestId, setLinkedGuestId] = useState(null)
+  const nameRef = useRef(null)
+
+  useEffect(() => { nameRef.current?.focus() }, [])
+
+  const effectiveWeight = calcWeight(selectedTags, user?.uid, tags, weightOverride, overrideValue)
+
+  function handleNameChange(val) {
+    setName(val)
+    setLinkedGuestId(null)
+    if (val.length < 2) { setSuggestions([]); setDuplicateWarning(null); return }
+    const lower = val.toLowerCase()
+    const matches = guests.filter(g => g.name.toLowerCase().includes(lower))
+    setSuggestions(matches.slice(0, 5))
+    const dups = findDuplicates(val, user?.uid, guests)
+    setDuplicateWarning(dups.length > 0 ? dups[0] : null)
+  }
+
+  function toggleTag(tagId) {
+    setSelectedTags(prev =>
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    )
+    setWeightOverride(false)
+  }
+
+  async function handleSave() {
+    if (!name.trim()) return
+    await addDoc(collection(db, 'guests'), {
+      name: name.trim(),
+      ownerId: user.uid,
+      tags: selectedTags,
+      weight: effectiveWeight,
+      weightOverride,
+      linkedGuestId: linkedGuestId || null,
+      rsvp: {
+        hansen: { saveTheDateSent: false, inviteSent: false },
+        lavita: { saveTheDateSent: false, inviteSent: false },
+        confirmed: false,
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    setToast(`${name.trim()} added`)
+    setName('')
+    setWeightOverride(false)
+    setOverrideValue(null)
+    setLinkedGuestId(null)
+    setSuggestions([])
+    setDuplicateWarning(null)
+    nameRef.current?.focus()
+  }
+
+  async function handleAddNewTag() {
+    if (!newTagName.trim()) return
+    await addDoc(collection(db, 'tags'), {
+      name: newTagName.trim(),
+      createdBy: user.uid,
+      createdByInitial: role === 'hansen' ? 'H' : 'L',
+      weights: { [user.uid]: 5 },
+      color: '#f0e8ff',
+    })
+    setNewTagName('')
+    setAddingTag(false)
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Name input */}
+      <div>
+        <input
+          ref={nameRef}
+          type="text"
+          placeholder="Guest name..."
+          value={name}
+          onChange={e => handleNameChange(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+        />
+        {/* Suggestions dropdown */}
+        {suggestions.length > 0 && (
+          <div className="border border-purple-200 rounded-lg mt-1 bg-white shadow-sm overflow-hidden">
+            {suggestions.map(g => {
+              const gTags = (g.tags || []).map(id => tags.find(t => t.id === id)).filter(Boolean)
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => { setName(g.name); setSuggestions([]) }}
+                  className="w-full text-left px-3 py-2 text-sm border-b last:border-0 border-gray-100 hover:bg-purple-50 flex items-center justify-between"
+                >
+                  <span>{g.name} {gTags.map(t => <span key={t.id} className="text-xs px-1.5 py-0.5 rounded-full ml-1" style={{ backgroundColor: t.color }}>{t.name}</span>)}</span>
+                  <span className="text-xs text-purple-500">{g.ownerId === user?.uid ? 'Your list' : 'Their list'}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {/* Duplicate warning */}
+        {duplicateWarning && !linkedGuestId && (
+          <div className="mt-1 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800 flex items-center justify-between">
+            <span>"{duplicateWarning.name}" exists in partner's list — same person?</span>
+            <button type="button" onClick={() => setLinkedGuestId(duplicateWarning.id)} className="ml-2 text-purple-600 underline">Link</button>
+          </div>
+        )}
+        {linkedGuestId && (
+          <div className="mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 flex items-center justify-between">
+            <span>Linked as same person ✓</span>
+            <button type="button" onClick={() => setLinkedGuestId(null)} className="text-gray-500 underline">Undo</button>
+          </div>
+        )}
+      </div>
+
+      {/* Tags */}
+      <div>
+        <p className="text-xs text-gray-500 mb-1.5">Tags</p>
+        <div className="flex flex-wrap gap-2">
+          {tags.map(tag => (
+            <TagPill
+              key={tag.id}
+              tag={tag}
+              selected={selectedTags.includes(tag.id)}
+              onClick={() => toggleTag(tag.id)}
+            />
+          ))}
+          {addingTag ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={newTagName}
+                onChange={e => setNewTagName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddNewTag()}
+                placeholder="Tag name..."
+                className="border border-gray-300 rounded-full px-2 py-0.5 text-xs w-24 focus:outline-none"
+              />
+              <button type="button" onClick={handleAddNewTag} className="text-xs text-purple-500">Add</button>
+              <button type="button" onClick={() => setAddingTag(false)} className="text-xs text-gray-400">✕</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingTag(true)}
+              className="text-xs px-2 py-0.5 rounded-full border border-dashed border-gray-300 text-gray-500"
+            >
+              + new
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Weight */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Weight</span>
+        {editingWeight ? (
+          <input
+            autoFocus
+            type="number"
+            min="1" max="10"
+            value={overrideValue ?? effectiveWeight}
+            onChange={e => { setOverrideValue(Number(e.target.value)); setWeightOverride(true) }}
+            onBlur={() => setEditingWeight(false)}
+            className="w-14 border border-purple-300 rounded px-2 py-0.5 text-sm text-center"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingWeight(true)}
+            className="bg-purple-100 text-purple-600 font-bold px-3 py-0.5 rounded-lg text-sm"
+          >
+            {effectiveWeight}
+          </button>
+        )}
+        {!weightOverride && <span className="text-xs text-gray-400">auto from tags · tap to override</span>}
+        {weightOverride && <button type="button" onClick={() => { setWeightOverride(false); setOverrideValue(null) }} className="text-xs text-gray-400 underline">reset</button>}
+      </div>
+
+      {/* Save */}
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={!name.trim()}
+        className="w-full bg-purple-500 text-white rounded-xl py-3 font-semibold text-sm disabled:opacity-40"
+      >
+        Save + Add Next
+      </button>
+
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  )
+}
