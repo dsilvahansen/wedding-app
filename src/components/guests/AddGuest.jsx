@@ -24,6 +24,10 @@ export default function AddGuest() {
   const [suggestions, setSuggestions] = useState([])
   const [duplicateWarning, setDuplicateWarning] = useState(null)
   const [linkedGuestId, setLinkedGuestId] = useState(null)
+  const [isGroup, setIsGroup] = useState(false)
+  const [adultCount, setAdultCount] = useState(1)
+  const [kidCount, setKidCount] = useState(0)
+  const [groupNotes, setGroupNotes] = useState('')
   const nameRef = useRef(null)
 
   useEffect(() => { nameRef.current?.focus() }, [])
@@ -51,6 +55,10 @@ export default function AddGuest() {
   async function handleSave() {
     if (!name.trim()) return
     try {
+      const groupFields = isGroup
+        ? { isGroup: true, adultCount, kidCount, groupNotes }
+        : {}
+
       await addDoc(collection(db, 'guests'), {
         name: name.trim(),
         ownerId: user.uid,
@@ -58,6 +66,7 @@ export default function AddGuest() {
         weight: effectiveWeight,
         weightOverride,
         linkedGuestId: linkedGuestId || null,
+        ...groupFields,
         rsvp: {
           hansen: { saveTheDateSent: false, inviteSent: false },
           lavita: { saveTheDateSent: false, inviteSent: false },
@@ -74,6 +83,10 @@ export default function AddGuest() {
       setLinkedGuestId(null)
       setSuggestions([])
       setDuplicateWarning(null)
+      setIsGroup(false)
+      setAdultCount(1)
+      setKidCount(0)
+      setGroupNotes('')
       nameRef.current?.focus()
     } catch (err) {
       setToast('Failed to save. Try again.')
@@ -142,6 +155,65 @@ export default function AddGuest() {
           </div>
         )}
       </div>
+
+      {/* Family / Group toggle */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isGroup ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
+        <label htmlFor="isGroupToggle" className={`text-xs font-medium cursor-pointer select-none ${isGroup ? 'text-purple-600' : 'text-gray-500'}`}>
+          👨‍👩‍👧 Family / Group
+        </label>
+        <input
+          id="isGroupToggle"
+          type="checkbox"
+          aria-label="Family / Group"
+          checked={isGroup}
+          onChange={e => {
+            setIsGroup(e.target.checked)
+            if (!e.target.checked) {
+              setAdultCount(1)
+              setKidCount(0)
+              setGroupNotes('')
+            }
+          }}
+          className="ml-auto accent-purple-500 w-4 h-4 cursor-pointer"
+        />
+      </div>
+
+      {/* Group counters + notes (visible only when isGroup) */}
+      {isGroup && (
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            {/* Adults stepper */}
+            <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+              <p className="text-xs text-gray-500 mb-1">Adults</p>
+              <div className="flex items-center justify-center gap-4">
+                <button type="button" aria-label="−" onClick={() => setAdultCount(c => Math.max(1, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
+                <span className="font-bold text-sm w-4 text-center">{adultCount}</span>
+                <button type="button" aria-label="+" onClick={() => setAdultCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
+              </div>
+            </div>
+            {/* Kids stepper */}
+            <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+              <p className="text-xs text-gray-500 mb-1">Kids</p>
+              <div className="flex items-center justify-center gap-4">
+                <button type="button" aria-label="−" onClick={() => setKidCount(c => Math.max(0, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
+                <span className="font-bold text-sm w-4 text-center">{kidCount}</span>
+                <button type="button" aria-label="+" onClick={() => setKidCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
+              </div>
+            </div>
+          </div>
+          {/* Notes textarea */}
+          <div className="bg-gray-50 rounded-lg px-3 py-2">
+            <p className="text-xs text-gray-500 mb-1">Notes (optional)</p>
+            <textarea
+              value={groupNotes}
+              onChange={e => setGroupNotes(e.target.value)}
+              placeholder="e.g. John, Jane + 1 kid..."
+              rows={2}
+              className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-purple-300"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Tags */}
       <div>
