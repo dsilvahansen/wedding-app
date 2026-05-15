@@ -50,42 +50,51 @@ export default function AddGuest() {
 
   async function handleSave() {
     if (!name.trim()) return
-    await addDoc(collection(db, 'guests'), {
-      name: name.trim(),
-      ownerId: user.uid,
-      tags: selectedTags,
-      weight: effectiveWeight,
-      weightOverride,
-      linkedGuestId: linkedGuestId || null,
-      rsvp: {
-        hansen: { saveTheDateSent: false, inviteSent: false },
-        lavita: { saveTheDateSent: false, inviteSent: false },
-        confirmed: false,
-      },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    setToast(`${name.trim()} added`)
-    setName('')
-    setWeightOverride(false)
-    setOverrideValue(null)
-    setLinkedGuestId(null)
-    setSuggestions([])
-    setDuplicateWarning(null)
-    nameRef.current?.focus()
+    try {
+      await addDoc(collection(db, 'guests'), {
+        name: name.trim(),
+        ownerId: user.uid,
+        tags: selectedTags,
+        weight: effectiveWeight,
+        weightOverride,
+        linkedGuestId: linkedGuestId || null,
+        rsvp: {
+          hansen: { saveTheDateSent: false, inviteSent: false },
+          lavita: { saveTheDateSent: false, inviteSent: false },
+          confirmed: false,
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      setToast(`${name.trim()} added`)
+      setName('')
+      setSelectedTags([])
+      setWeightOverride(false)
+      setOverrideValue(null)
+      setLinkedGuestId(null)
+      setSuggestions([])
+      setDuplicateWarning(null)
+      nameRef.current?.focus()
+    } catch (err) {
+      setToast('Failed to save. Try again.')
+    }
   }
 
   async function handleAddNewTag() {
     if (!newTagName.trim()) return
-    await addDoc(collection(db, 'tags'), {
-      name: newTagName.trim(),
-      createdBy: user.uid,
-      createdByInitial: role === 'hansen' ? 'H' : 'L',
-      weights: { [user.uid]: 5 },
-      color: '#f0e8ff',
-    })
-    setNewTagName('')
-    setAddingTag(false)
+    try {
+      await addDoc(collection(db, 'tags'), {
+        name: newTagName.trim(),
+        createdBy: user.uid,
+        createdByInitial: role === 'hansen' ? 'H' : 'L',
+        weights: { [user.uid]: 5 },
+        color: '#f0e8ff',
+      })
+      setNewTagName('')
+      setAddingTag(false)
+    } catch (err) {
+      console.error('Failed to save tag:', err)
+    }
   }
 
   return (
