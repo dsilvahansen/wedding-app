@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only authenticated users can read/write
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuth();
+    }
+
+    match /guests/{guestId} {
+      allow read, write: if isAuth();
+    }
+
+    match /tags/{tagId} {
+      allow read, write: if isAuth();
+    }
+  }
+}
