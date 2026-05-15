@@ -21,20 +21,30 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   }
 
   async function handleSave() {
-    await updateDoc(doc(db, 'guests', guest.id), {
-      name: name.trim(),
-      tags: selectedTags,
-      weight: effectiveWeight,
-      weightOverride,
-      updatedAt: serverTimestamp(),
-    })
-    onClose()
+    try {
+      await updateDoc(doc(db, 'guests', guest.id), {
+        name: name.trim(),
+        tags: selectedTags,
+        weight: effectiveWeight,
+        weightOverride,
+        updatedAt: serverTimestamp(),
+      })
+      onClose()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save. Please try again.')
+    }
   }
 
   async function handleDelete() {
     if (!confirm(`Remove ${guest.name} from your list?`)) return
-    await deleteDoc(doc(db, 'guests', guest.id))
-    onClose()
+    try {
+      await deleteDoc(doc(db, 'guests', guest.id))
+      onClose()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to delete. Please try again.')
+    }
   }
 
   async function handleRsvpToggle(field) {
@@ -42,9 +52,13 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
     if (field === 'confirmed') {
       rsvp.confirmed = !rsvp.confirmed
     } else {
-      rsvp[role] = { ...rsvp[role], [field]: !rsvp[role][field] }
+      rsvp[role] = { ...rsvp[role], [field]: !rsvp[role]?.[field] }
     }
-    await updateDoc(doc(db, 'guests', guest.id), { rsvp, updatedAt: serverTimestamp() })
+    try {
+      await updateDoc(doc(db, 'guests', guest.id), { rsvp, updatedAt: serverTimestamp() })
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   if (!guest) return null
