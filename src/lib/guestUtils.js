@@ -68,3 +68,8 @@ export function sortGuests(guests, sortBy = 'weight') {
     return b.weight - a.weight
   })
 }
+
+export function getTotalHeadcount(guest) {
+  if (!guest.isGroup) return 1
+  return (guest.adultCount ?? 0) + (guest.kidCount ?? 0)
+}

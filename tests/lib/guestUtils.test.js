@@ -4,6 +4,7 @@ import {
   findDuplicates,
   deduplicateForCombined,
   sortGuests,
+  getTotalHeadcount,
 } from '../../src/lib/guestUtils.js'
 
 const mockTags = [
@@ -93,5 +94,31 @@ describe('sortGuests', () => {
   it('sorts by name A-Z', () => {
     const guests = [{ name: 'Zara', weight: 5 }, { name: 'Alice', weight: 5 }]
     expect(sortGuests(guests, 'name')[0].name).toBe('Alice')
+  })
+})
+
+describe('getTotalHeadcount', () => {
+  it('returns 1 for a non-group guest', () => {
+    expect(getTotalHeadcount({ name: 'Alice' })).toBe(1)
+  })
+
+  it('returns 1 when isGroup is false', () => {
+    expect(getTotalHeadcount({ isGroup: false, adultCount: 3, kidCount: 1 })).toBe(1)
+  })
+
+  it('returns adultCount + kidCount for a group guest', () => {
+    expect(getTotalHeadcount({ isGroup: true, adultCount: 2, kidCount: 1 })).toBe(3)
+  })
+
+  it('returns 0 for a group with no counts set', () => {
+    expect(getTotalHeadcount({ isGroup: true })).toBe(0)
+  })
+
+  it('treats missing kidCount as 0', () => {
+    expect(getTotalHeadcount({ isGroup: true, adultCount: 3 })).toBe(3)
+  })
+
+  it('treats missing adultCount as 0', () => {
+    expect(getTotalHeadcount({ isGroup: true, kidCount: 2 })).toBe(2)
   })
 })
