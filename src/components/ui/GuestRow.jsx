@@ -24,7 +24,7 @@ export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpTog
       </div>
       <span className="text-purple-500 font-bold text-sm w-5 text-center">{guest.weight}</span>
       <RsvpIcons
-        rsvp={guest.rsvp}
+        rsvp={guest.rsvp ?? { hansen: {}, lavita: {}, confirmed: false }}
         currentRole={currentRole}
         readOnly={readOnly}
         onToggle={field => onRsvpToggle(guest.id, field)}

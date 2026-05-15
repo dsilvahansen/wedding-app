@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import GuestRow from '../../../src/components/ui/GuestRow.jsx'
 
@@ -25,5 +25,19 @@ describe('GuestRow', () => {
   it('renders weight', () => {
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} />)
     expect(screen.getByText('8')).toBeInTheDocument()
+  })
+
+  it('calls onRsvpToggle with guest id and field when RSVP icon clicked', () => {
+    const onRsvpToggle = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={onRsvpToggle} onEdit={() => {}} />)
+    fireEvent.click(screen.getByTitle('Save the date'))
+    expect(onRsvpToggle).toHaveBeenCalledWith('g1', 'saveTheDateSent')
+  })
+
+  it('does not call onEdit when readOnly is true', () => {
+    const onEdit = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={true} onRsvpToggle={() => {}} onEdit={onEdit} />)
+    fireEvent.click(screen.getByText('John Smith'))
+    expect(onEdit).not.toHaveBeenCalled()
   })
 })

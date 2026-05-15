@@ -4,6 +4,7 @@ export default function TagPill({ tag, selected, onClick }) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className="inline-flex items-baseline gap-0.5 px-2 py-0.5 rounded-full text-xs transition-colors"
       style={{ backgroundColor: bg, color: textColor }}
