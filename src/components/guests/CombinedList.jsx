@@ -4,7 +4,7 @@ import { db } from '../../firebase.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useGuests } from '../../hooks/useGuests.js'
 import { useTags } from '../../hooks/useTags.js'
-import { deduplicateForCombined, sortGuests } from '../../lib/guestUtils.js'
+import { deduplicateForCombined, sortGuests, getTotalHeadcount } from '../../lib/guestUtils.js'
 import GuestRow from '../ui/GuestRow.jsx'
 
 export default function CombinedList() {
@@ -62,7 +62,9 @@ export default function CombinedList() {
     <div>
       {/* Summary bar */}
       <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
-        <span className="text-sm font-semibold text-purple-700">{combined.length} total</span>
+        <span className="text-sm font-semibold text-purple-700">
+          {combined.reduce((sum, g) => sum + getTotalHeadcount(g), 0)} total
+        </span>
         <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">{sharedCount} shared ★</span>
       </div>
 
