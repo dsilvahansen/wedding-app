@@ -58,4 +58,22 @@ describe('GuestRow', () => {
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} />)
     expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument()
   })
+
+  it('shows checkbox and hides RSVP icons in selectionMode', () => {
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} selectionMode={true} selected={false} />)
+    expect(screen.getByRole('checkbox')).toBeInTheDocument()
+    expect(screen.queryByTitle('Save the date')).not.toBeInTheDocument()
+  })
+
+  it('checkbox is checked when selected=true', () => {
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} selectionMode={true} selected={true} />)
+    expect(screen.getByRole('checkbox')).toBeChecked()
+  })
+
+  it('calls onEdit when row clicked in selectionMode', () => {
+    const onEdit = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={onEdit} selectionMode={true} selected={false} />)
+    fireEvent.click(screen.getByText('John Smith'))
+    expect(onEdit).toHaveBeenCalled()
+  })
 })
