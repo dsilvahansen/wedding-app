@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import { useAuth } from './useAuth.js'
@@ -49,13 +49,8 @@ export function useBulkSelect() {
 
     try {
       await Promise.all(selected.map(g => {
-        const rsvp = { ...g.rsvp }
-        if (isConfirmed) {
-          rsvp.confirmed = newValue
-        } else {
-          rsvp[role] = { ...rsvp[role], [field]: newValue }
-        }
-        return updateDoc(doc(db, 'guests', g.id), { rsvp, updatedAt: serverTimestamp() })
+        const fieldPath = isConfirmed ? 'rsvp.confirmed' : `rsvp.${role}.${field}`
+        return updateDoc(doc(db, 'guests', g.id), { [fieldPath]: newValue, updatedAt: serverTimestamp() })
       }))
 
       clearTimeout(undoTimerRef.current)
@@ -83,13 +78,8 @@ export function useBulkSelect() {
         const guest = guests.find(g => g.id === guestId)
         if (!guest) return Promise.resolve()
         const isConfirmed = field === 'confirmed'
-        const rsvp = { ...guest.rsvp }
-        if (isConfirmed) {
-          rsvp.confirmed = previousValue
-        } else {
-          rsvp[role] = { ...rsvp[role], [field]: previousValue }
-        }
-        return updateDoc(doc(db, 'guests', guestId), { rsvp, updatedAt: serverTimestamp() })
+        const fieldPath = isConfirmed ? 'rsvp.confirmed' : `rsvp.${role}.${field}`
+        return updateDoc(doc(db, 'guests', guestId), { [fieldPath]: previousValue, updatedAt: serverTimestamp() })
       }))
       snapshotRef.current = []
       return null
@@ -97,6 +87,10 @@ export function useBulkSelect() {
       return 'Failed to undo. Try again.'
     }
   }, [role])
+
+  useEffect(() => {
+    return () => clearTimeout(undoTimerRef.current)
+  }, [])
 
   return {
     selectionMode,

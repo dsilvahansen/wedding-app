@@ -67,8 +67,8 @@ describe('useBulkSelect', () => {
     })
     expect(mockUpdateDoc).toHaveBeenCalledTimes(2)
     const calls = mockUpdateDoc.mock.calls
-    expect(calls[0][1].rsvp.hansen.saveTheDateSent).toBe(true)
-    expect(calls[1][1].rsvp.hansen.saveTheDateSent).toBe(true)
+    expect(calls[0][1]['rsvp.hansen.saveTheDateSent']).toBe(true)
+    expect(calls[1][1]['rsvp.hansen.saveTheDateSent']).toBe(true)
   })
 
   it('applyBulkAction sets all to false when all are already true', async () => {
@@ -79,8 +79,8 @@ describe('useBulkSelect', () => {
       await result.current.applyBulkAction('saveTheDateSent', guests)
     })
     const calls = mockUpdateDoc.mock.calls
-    expect(calls[0][1].rsvp.hansen.saveTheDateSent).toBe(false)
-    expect(calls[1][1].rsvp.hansen.saveTheDateSent).toBe(false)
+    expect(calls[0][1]['rsvp.hansen.saveTheDateSent']).toBe(false)
+    expect(calls[1][1]['rsvp.hansen.saveTheDateSent']).toBe(false)
   })
 
   it('applyBulkAction sets confirmed directly (not role-scoped)', async () => {
@@ -90,7 +90,7 @@ describe('useBulkSelect', () => {
     await act(async () => {
       await result.current.applyBulkAction('confirmed', guests)
     })
-    expect(mockUpdateDoc.mock.calls[0][1].rsvp.confirmed).toBe(true)
+    expect(mockUpdateDoc.mock.calls[0][1]['rsvp.confirmed']).toBe(true)
   })
 
   it('applyBulkAction sets undoAvailable=true and undoMessage on success', async () => {
@@ -116,7 +116,7 @@ describe('useBulkSelect', () => {
       await result.current.undoBulkAction(guests)
     })
     expect(mockUpdateDoc).toHaveBeenCalledTimes(1)
-    expect(mockUpdateDoc.mock.calls[0][1].rsvp.hansen.saveTheDateSent).toBe(false)
+    expect(mockUpdateDoc.mock.calls[0][1]['rsvp.hansen.saveTheDateSent']).toBe(false)
     expect(result.current.undoAvailable).toBe(false)
   })
 
