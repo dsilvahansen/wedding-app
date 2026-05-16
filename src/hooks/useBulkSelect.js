@@ -14,8 +14,8 @@ export function useBulkSelect() {
 
   const toggleSelectionMode = useCallback(() => {
     setSelectionMode(prev => {
+      setSelectedIds(new Set())
       if (prev) {
-        setSelectedIds(new Set())
         clearTimeout(undoTimerRef.current)
       }
       return !prev
