@@ -6,7 +6,8 @@ export default function Toast({ message, onDone, action }) {
   useEffect(() => { onDoneRef.current = onDone })
 
   useEffect(() => {
-    const t = setTimeout(() => { setVisible(false); onDoneRef.current?.() }, 2000)
+    const delay = action ? 4000 : 2000
+    const t = setTimeout(() => { setVisible(false); onDoneRef.current?.() }, delay)
     return () => clearTimeout(t)
   }, [])
 
