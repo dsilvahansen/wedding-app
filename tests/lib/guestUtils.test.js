@@ -141,6 +141,10 @@ describe('getOwnerRole', () => {
   it("returns 'lavita' for role 'lContributor'", () => {
     expect(getOwnerRole('lContributor')).toBe('lavita')
   })
+
+  it('throws for unknown role', () => {
+    expect(() => getOwnerRole('admin')).toThrow('getOwnerRole: unknown role "admin"')
+  })
 })
 
 describe('isContributor', () => {

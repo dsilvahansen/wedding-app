@@ -79,7 +79,9 @@ export function getTotalHeadcount(guest) {
  * Contributors map to their associated side.
  */
 export function getOwnerRole(role) {
-  return (role === 'hansen' || role === 'hContributor') ? 'hansen' : 'lavita'
+  if (role === 'hansen' || role === 'hContributor') return 'hansen'
+  if (role === 'lavita' || role === 'lContributor') return 'lavita'
+  throw new Error(`getOwnerRole: unknown role "${role}"`)
 }
 
 /**
