@@ -118,7 +118,7 @@ export default function GuestList({ readOnly }) {
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">{selectedIds.size} selected</span>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setPendingField('saveTheDateSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">📅 Date</button>
+                <button type="button" onClick={() => setPendingField('saveTheDateSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">📅 STD</button>
                 <button type="button" onClick={() => setPendingField('inviteSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✉️ Invite</button>
                 <button type="button" onClick={() => setPendingField('confirmed')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✅</button>
               </div>

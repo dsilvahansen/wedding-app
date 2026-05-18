@@ -12,7 +12,7 @@ describe('RsvpIcons', () => {
   it('renders 3 icons', () => {
     render(<RsvpIcons rsvp={baseRsvp} currentRole="hansen" readOnly={true} onToggle={() => {}} />)
     expect(screen.getByTitle('Save the date')).toBeInTheDocument()
-    expect(screen.getByTitle('Invite')).toBeInTheDocument()
+    expect(screen.getByTitle('Invite sent')).toBeInTheDocument()
     expect(screen.getByTitle('Confirmed')).toBeInTheDocument()
   })
 

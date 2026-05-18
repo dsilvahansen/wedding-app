@@ -1,4 +1,4 @@
-function IconButton({ title, emoji, active, partnerActive, field, readOnly, onToggle, currentInitial, partnerInitial }) {
+function IconButton({ title, label, emoji, active, partnerActive, field, readOnly, onToggle, currentInitial, partnerInitial }) {
   const isConfirmed = field === 'confirmed'
   const opacity = active ? 'opacity-100' : 'opacity-25'
 
@@ -8,9 +8,10 @@ function IconButton({ title, emoji, active, partnerActive, field, readOnly, onTo
       type="button"
       disabled={readOnly}
       onClick={() => !readOnly && onToggle(field)}
-      className={`flex flex-col items-center ${opacity} ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+      className={`flex flex-col items-center gap-0.5 ${opacity} ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
     >
       <span className="text-base leading-none">{emoji}</span>
+      <span className="text-[8px] leading-none text-gray-400">{label}</span>
       {!isConfirmed && (
         <span className="text-[8px] leading-none text-gray-400">
           {active ? currentInitial : '·'}{partnerActive ? partnerInitial : '·'}
@@ -32,9 +33,9 @@ export default function RsvpIcons({ rsvp, currentRole, readOnly, onToggle }) {
 
   return (
     <div className="flex gap-1 items-center">
-      <IconButton title="Save the date" emoji="📅" active={currentStd} partnerActive={partnerStd} field="saveTheDateSent" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
-      <IconButton title="Invite" emoji="✉️" active={currentInvite} partnerActive={partnerInvite} field="inviteSent" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
-      <IconButton title="Confirmed" emoji="✅" active={rsvp.confirmed} partnerActive={false} field="confirmed" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
+      <IconButton title="Save the date" label="STD" emoji="📅" active={currentStd} partnerActive={partnerStd} field="saveTheDateSent" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
+      <IconButton title="Invite sent" label="Invite" emoji="✉️" active={currentInvite} partnerActive={partnerInvite} field="inviteSent" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
+      <IconButton title="Confirmed" label="Conf" emoji="✅" active={rsvp.confirmed} partnerActive={false} field="confirmed" readOnly={readOnly} onToggle={onToggle} currentInitial={currentInitial} partnerInitial={partnerInitial} />
     </div>
   )
 }
