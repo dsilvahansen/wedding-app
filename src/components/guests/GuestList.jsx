@@ -40,7 +40,7 @@ export default function GuestList({ readOnly }) {
   const listName = readOnly ? `${partnerName}'s List` : 'My List'
 
   async function handleRsvpToggle(guestId, field) {
-    if (readOnly) return
+    if (readOnly || isContributor(role)) return
     const guest = guests.find(g => g.id === guestId)
     if (!guest) return
     const rsvp = { ...guest.rsvp }
@@ -90,7 +90,7 @@ export default function GuestList({ readOnly }) {
               guest={guest}
               tags={tags}
               currentRole={role}
-              readOnly={readOnly || isContributor(role)}
+              readOnly={readOnly}
               onRsvpToggle={handleRsvpToggle}
               onEdit={selectionMode ? () => toggleGuest(guest.id) : () => !readOnly && setEditingGuest(guest)}
               selectionMode={selectionMode}
