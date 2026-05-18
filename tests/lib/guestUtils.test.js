@@ -5,6 +5,8 @@ import {
   deduplicateForCombined,
   sortGuests,
   getTotalHeadcount,
+  getOwnerRole,
+  isContributor,
 } from '../../src/lib/guestUtils.js'
 
 const mockTags = [
@@ -120,5 +122,41 @@ describe('getTotalHeadcount', () => {
 
   it('treats missing adultCount as 0', () => {
     expect(getTotalHeadcount({ isGroup: true, kidCount: 2 })).toBe(2)
+  })
+})
+
+describe('getOwnerRole', () => {
+  it("returns 'hansen' for role 'hansen'", () => {
+    expect(getOwnerRole('hansen')).toBe('hansen')
+  })
+
+  it("returns 'hansen' for role 'hContributor'", () => {
+    expect(getOwnerRole('hContributor')).toBe('hansen')
+  })
+
+  it("returns 'lavita' for role 'lavita'", () => {
+    expect(getOwnerRole('lavita')).toBe('lavita')
+  })
+
+  it("returns 'lavita' for role 'lContributor'", () => {
+    expect(getOwnerRole('lContributor')).toBe('lavita')
+  })
+})
+
+describe('isContributor', () => {
+  it('returns true for hContributor', () => {
+    expect(isContributor('hContributor')).toBe(true)
+  })
+
+  it('returns true for lContributor', () => {
+    expect(isContributor('lContributor')).toBe(true)
+  })
+
+  it('returns false for hansen', () => {
+    expect(isContributor('hansen')).toBe(false)
+  })
+
+  it('returns false for lavita', () => {
+    expect(isContributor('lavita')).toBe(false)
   })
 })

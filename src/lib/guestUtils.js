@@ -73,3 +73,18 @@ export function getTotalHeadcount(guest) {
   if (!guest.isGroup) return 1
   return (guest.adultCount ?? 0) + (guest.kidCount ?? 0)
 }
+
+/**
+ * Returns the owning side ('hansen' or 'lavita') for any role.
+ * Contributors map to their associated side.
+ */
+export function getOwnerRole(role) {
+  return (role === 'hansen' || role === 'hContributor') ? 'hansen' : 'lavita'
+}
+
+/**
+ * Returns true if the role is a contributor (not a primary owner).
+ */
+export function isContributor(role) {
+  return role === 'hContributor' || role === 'lContributor'
+}
