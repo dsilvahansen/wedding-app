@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useGuests } from '../../hooks/useGuests.js'
 import { useTags } from '../../hooks/useTags.js'
 import { useBulkSelect } from '../../hooks/useBulkSelect.js'
-import { sortGuests } from '../../lib/guestUtils.js'
+import { sortGuests, getTotalHeadcount } from '../../lib/guestUtils.js'
 import GuestRow from '../ui/GuestRow.jsx'
 import FilterBar from '../ui/FilterBar.jsx'
 import GuestEditSheet from './GuestEditSheet.jsx'
@@ -66,7 +66,7 @@ export default function GuestList({ readOnly }) {
     <div>
       <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
         <span className="text-sm font-semibold text-purple-700">
-          {selectionMode ? `${listName} · ${selectedIds.size} selected` : `${listName} (${sorted.length})`}
+          {selectionMode ? `${listName} · ${selectedIds.size} selected` : `${listName} (${sorted.reduce((sum, g) => sum + getTotalHeadcount(g), 0)})`}
         </span>
         {!readOnly && (
           <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
