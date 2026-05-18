@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useGuests } from '../../hooks/useGuests.js'
 import { useTags } from '../../hooks/useTags.js'
 import { useBulkSelect } from '../../hooks/useBulkSelect.js'
-import { deduplicateForCombined, sortGuests, getTotalHeadcount } from '../../lib/guestUtils.js'
+import { deduplicateForCombined, sortGuests, getTotalHeadcount, getOwnerRole } from '../../lib/guestUtils.js'
 import GuestRow from '../ui/GuestRow.jsx'
 import Toast from '../ui/Toast.jsx'
 
@@ -67,14 +67,14 @@ export default function CombinedList() {
 
   function getBadge(entry) {
     if (entry.shared) return { label: '★', style: { backgroundColor: '#f39c12', color: '#fff' } }
-    const ownerIsCurrentUser = entry.ownerId === user?.uid
-    const initial = ownerIsCurrentUser
-      ? (role === 'hansen' ? 'H' : 'L')
-      : (role === 'hansen' ? 'L' : 'H')
-    const style = ownerIsCurrentUser
+    const myOwnerRole = getOwnerRole(role)
+    const entryOwnerRole = entry.ownerRole ?? (entry.ownerId === user?.uid ? myOwnerRole : (myOwnerRole === 'hansen' ? 'lavita' : 'hansen'))
+    const isMyGuest = entryOwnerRole === myOwnerRole
+    const label = isMyGuest ? (myOwnerRole === 'hansen' ? 'H' : 'L') : (myOwnerRole === 'hansen' ? 'L' : 'H')
+    const style = isMyGuest
       ? { backgroundColor: '#e0d0f0', color: '#9b59b6' }
       : { backgroundColor: '#f0d0e8', color: '#c0369b' }
-    return { label: initial, style }
+    return { label, style }
   }
 
   return (
