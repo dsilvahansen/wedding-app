@@ -4,7 +4,7 @@ import { db } from '../../firebase.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useGuests } from '../../hooks/useGuests.js'
 import { useTags } from '../../hooks/useTags.js'
-import { calcWeight, findDuplicates } from '../../lib/guestUtils.js'
+import { calcWeight, findDuplicates, getOwnerRole } from '../../lib/guestUtils.js'
 import TagPill from '../ui/TagPill.jsx'
 import Toast from '../ui/Toast.jsx'
 
@@ -62,6 +62,8 @@ export default function AddGuest() {
       await addDoc(collection(db, 'guests'), {
         name: name.trim(),
         ownerId: user.uid,
+        ownerRole: getOwnerRole(role),
+        createdByRole: role,
         tags: selectedTags,
         weight: effectiveWeight,
         weightOverride,
