@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase.js'
-import { calcWeight } from '../../lib/guestUtils.js'
+import { calcWeight, isContributor } from '../../lib/guestUtils.js'
 import TagPill from '../ui/TagPill.jsx'
 import BottomSheet from '../ui/BottomSheet.jsx'
 
@@ -159,31 +159,33 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
           />
         </div>
 
-        <div>
-          <label className="text-xs text-gray-500 block mb-2">RSVP Status</label>
-          <div className="space-y-1 text-sm">
-            {['hansen', 'lavita'].map(r => (
-              <div key={r} className="flex items-center gap-3">
-                <span className="w-16 text-xs font-medium capitalize">{r === 'hansen' ? 'Hansen (H)' : 'Lavita (L)'}</span>
-                {['saveTheDateSent', 'inviteSent'].map(field => (
-                  <label key={field} className="flex items-center gap-1 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={guest.rsvp[r]?.[field] || false}
-                      onChange={() => handleRsvpToggle(field)}
-                      disabled={r !== role}
-                    />
-                    {field === 'saveTheDateSent' ? '📅' : '✉️'}
-                  </label>
-                ))}
-              </div>
-            ))}
-            <label className="flex items-center gap-2 text-xs mt-1">
-              <input type="checkbox" checked={guest.rsvp.confirmed || false} onChange={() => handleRsvpToggle('confirmed')} />
-              ✅ Confirmed (shared)
-            </label>
+        {!isContributor(role) && (
+          <div>
+            <label className="text-xs text-gray-500 block mb-2">RSVP Status</label>
+            <div className="space-y-1 text-sm">
+              {['hansen', 'lavita'].map(r => (
+                <div key={r} className="flex items-center gap-3">
+                  <span className="w-16 text-xs font-medium capitalize">{r === 'hansen' ? 'Hansen (H)' : 'Lavita (L)'}</span>
+                  {['saveTheDateSent', 'inviteSent'].map(field => (
+                    <label key={field} className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={guest.rsvp[r]?.[field] || false}
+                        onChange={() => handleRsvpToggle(field)}
+                        disabled={r !== role}
+                      />
+                      {field === 'saveTheDateSent' ? '📅' : '✉️'}
+                    </label>
+                  ))}
+                </div>
+              ))}
+              <label className="flex items-center gap-2 text-xs mt-1">
+                <input type="checkbox" checked={guest.rsvp.confirmed || false} onChange={() => handleRsvpToggle('confirmed')} />
+                ✅ Confirmed (shared)
+              </label>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={handleSave} className="flex-1 bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold">Save</button>
