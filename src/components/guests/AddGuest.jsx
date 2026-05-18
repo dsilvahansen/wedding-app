@@ -101,7 +101,7 @@ export default function AddGuest() {
       await addDoc(collection(db, 'tags'), {
         name: newTagName.trim(),
         createdBy: user.uid,
-        createdByInitial: role === 'hansen' ? 'H' : 'L',
+        createdByInitial: getOwnerRole(role) === 'hansen' ? 'H' : 'L',
         weights: { [user.uid]: 5 },
         color: '#f0e8ff',
       })
