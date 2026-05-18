@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useGuests } from '../../hooks/useGuests.js'
 import { useTags } from '../../hooks/useTags.js'
 import { useBulkSelect } from '../../hooks/useBulkSelect.js'
-import { sortGuests, getTotalHeadcount } from '../../lib/guestUtils.js'
+import { sortGuests, getTotalHeadcount, getOwnerRole, isContributor } from '../../lib/guestUtils.js'
 import GuestRow from '../ui/GuestRow.jsx'
 import FilterBar from '../ui/FilterBar.jsx'
 import GuestEditSheet from './GuestEditSheet.jsx'
@@ -28,10 +28,12 @@ export default function GuestList({ readOnly }) {
   const partnerName = role === 'hansen' ? 'Lavita' : 'Hansen'
 
   // My List shows current user's guests; Their List shows partner's
-  const myGuests = guests.filter(g => readOnly
-    ? g.ownerId !== user?.uid
-    : g.ownerId === user?.uid
-  )
+  const myOwnerRole = getOwnerRole(role)
+  const myGuests = guests.filter(g => {
+    // New guests have ownerRole; legacy guests fall back to ownerId
+    const guestSide = g.ownerRole ?? (g.ownerId === user?.uid ? myOwnerRole : (myOwnerRole === 'hansen' ? 'lavita' : 'hansen'))
+    return readOnly ? guestSide !== myOwnerRole : guestSide === myOwnerRole
+  })
 
   const filtered = activeTag ? myGuests.filter(g => g.tags?.includes(activeTag)) : myGuests
   const sorted = sortGuests(filtered, sortBy)
@@ -68,7 +70,7 @@ export default function GuestList({ readOnly }) {
         <span className="text-sm font-semibold text-purple-700">
           {selectionMode ? `${listName} · ${selectedIds.size} selected` : `${listName} (${sorted.reduce((sum, g) => sum + getTotalHeadcount(g), 0)})`}
         </span>
-        {!readOnly && (
+        {!readOnly && !isContributor(role) && (
           <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
             {selectionMode ? 'Done' : 'Select'}
           </button>
@@ -78,19 +80,25 @@ export default function GuestList({ readOnly }) {
       {sorted.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-8">No guests yet</p>
       ) : (
-        sorted.map(guest => (
-          <GuestRow
-            key={guest.id}
-            guest={guest}
-            tags={tags}
-            currentRole={role}
-            readOnly={readOnly}
-            onRsvpToggle={handleRsvpToggle}
-            onEdit={selectionMode ? () => toggleGuest(guest.id) : () => !readOnly && setEditingGuest(guest)}
-            selectionMode={selectionMode}
-            selected={selectedIds.has(guest.id)}
-          />
-        ))
+        sorted.map(guest => {
+          const badge = !readOnly && (guest.createdByRole === 'hContributor' || guest.createdByRole === 'lContributor')
+            ? { label: 'C', style: { backgroundColor: '#d0e8d0', color: '#2e7d32' } }
+            : undefined
+          return (
+            <GuestRow
+              key={guest.id}
+              guest={guest}
+              tags={tags}
+              currentRole={role}
+              readOnly={readOnly || isContributor(role)}
+              onRsvpToggle={handleRsvpToggle}
+              onEdit={selectionMode ? () => toggleGuest(guest.id) : () => !readOnly && setEditingGuest(guest)}
+              selectionMode={selectionMode}
+              selected={selectedIds.has(guest.id)}
+              badge={selectionMode ? undefined : badge}
+            />
+          )
+        })
       )}
       {editingGuest && (
         <GuestEditSheet
