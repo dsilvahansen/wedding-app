@@ -20,6 +20,7 @@ export default function TagEditSheet({ tag, userId, role, open, onClose }) {
           createdByInitial: role === 'hansen' ? 'H' : 'L',
           weights: { [userId]: weight },
           color,
+          order: Date.now(),
         })
       } else {
         await updateDoc(doc(db, 'tags', tag.id), {
