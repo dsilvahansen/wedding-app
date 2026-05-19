@@ -1,20 +1,21 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext.jsx'
 
 export default function LoginPage() {
-  const { login } = useAuthContext()
-  const navigate = useNavigate()
+  const { login, user, loading } = useAuthContext()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+
+  if (!loading && user) return <Navigate to="/" replace />
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     try {
       await login(email, password)
-      navigate('/')
+      // Navigation handled by the redirect above once auth state updates
     } catch {
       setError('Invalid email or password')
     }
