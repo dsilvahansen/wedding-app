@@ -1,0 +1,77 @@
+import { useState } from 'react'
+import { doc, updateDoc } from 'firebase/firestore'
+import { db } from '../../firebase.js'
+import BottomSheet from '../ui/BottomSheet.jsx'
+
+export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
+  const initialSelected = new Set(
+    guests.filter(g => g.tags?.includes(tag.id)).map(g => g.id)
+  )
+  const [selected, setSelected] = useState(initialSelected)
+
+  function toggle(guestId) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(guestId)) {
+        next.delete(guestId)
+      } else {
+        next.add(guestId)
+      }
+      return next
+    })
+  }
+
+  async function handleSave() {
+    const writes = guests.filter(g => {
+      const wasSelected = initialSelected.has(g.id)
+      const isSelected = selected.has(g.id)
+      return wasSelected !== isSelected
+    })
+    await Promise.all(
+      writes.map(g => {
+        const newTags = selected.has(g.id)
+          ? [...(g.tags ?? []), tag.id]
+          : (g.tags ?? []).filter(id => id !== tag.id)
+        return updateDoc(doc(db, 'guests', g.id), { tags: newTags })
+      })
+    )
+    onClose()
+  }
+
+  const assignedCount = selected.size
+  const totalCount = guests.length
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={`Assign to "${tag.name}"`}>
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500">{assignedCount} / {totalCount} guests assigned</p>
+        <div className="divide-y divide-gray-100">
+          {guests.map(g => {
+            const headcount = g.isGroup ? (g.adultCount ?? 0) + (g.kidCount ?? 0) : null
+            return (
+              <label key={g.id} className="flex items-center gap-3 py-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.has(g.id)}
+                  onChange={() => toggle(g.id)}
+                  className="accent-purple-500 w-4 h-4"
+                />
+                <span className="text-sm flex-1">{g.name}</span>
+                {headcount !== null && (
+                  <span className="text-xs text-gray-400">{headcount} people</span>
+                )}
+              </label>
+            )
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="w-full bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold mt-2"
+        >
+          Save
+        </button>
+      </div>
+    </BottomSheet>
+  )
+}
