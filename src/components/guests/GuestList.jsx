@@ -9,6 +9,8 @@ import { sortGuests, getTotalHeadcount, getOwnerRole, isContributor } from '../.
 import GuestRow from '../ui/GuestRow.jsx'
 import FilterBar from '../ui/FilterBar.jsx'
 import GuestEditSheet from './GuestEditSheet.jsx'
+import AddGuest from './AddGuest.jsx'
+import BottomSheet from '../ui/BottomSheet.jsx'
 import Toast from '../ui/Toast.jsx'
 
 export default function GuestList({ readOnly }) {
@@ -19,6 +21,7 @@ export default function GuestList({ readOnly }) {
   const [activeTag, setActiveTag] = useState(null)
   const [sortBy, setSortBy] = useState('weight')
   const [editingGuest, setEditingGuest] = useState(null)
+  const [addingGuest, setAddingGuest] = useState(false)
   const [pendingField, setPendingField] = useState(null)
   const [toast, setToast] = useState(null)
 
@@ -143,6 +146,21 @@ export default function GuestList({ readOnly }) {
             onClick: () => undoBulkAction(guests),
           } : undefined}
         />
+      )}
+      {!readOnly && !isContributor(role) && !selectionMode && (
+        <button
+          type="button"
+          onClick={() => setAddingGuest(true)}
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-purple-500 text-white rounded-full w-14 h-14 text-3xl shadow-lg flex items-center justify-center z-30"
+          aria-label="Add guest"
+        >
+          +
+        </button>
+      )}
+      {addingGuest && (
+        <BottomSheet open={addingGuest} onClose={() => setAddingGuest(false)} title="Add Guest">
+          <AddGuest />
+        </BottomSheet>
       )}
     </div>
   )
