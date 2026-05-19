@@ -9,6 +9,7 @@ export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
   )
   const [selected, setSelected] = useState(() => new Set(initialSelectedRef.current))
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
 
   function toggle(guestId) {
     setSelected(prev => {
@@ -49,12 +50,28 @@ export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
   const assignedCount = selected.size
   const totalCount = guests.length
 
+  const displayGuests = guests
+    .filter(g => g.name?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const aSelected = selected.has(a.id)
+      const bSelected = selected.has(b.id)
+      if (aSelected !== bSelected) return aSelected ? -1 : 1
+      return 0
+    })
+
   return (
     <BottomSheet open={open} onClose={onClose} title={`Assign to "${tag.name}"`}>
       <div className="space-y-3">
+        <input
+          type="text"
+          placeholder="Search guests..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-300"
+        />
         <p className="text-xs text-gray-500">{assignedCount} / {totalCount} guests assigned</p>
         <div className="divide-y divide-gray-100">
-          {guests.map(g => {
+          {displayGuests.map(g => {
             const headcount = g.isGroup ? (g.adultCount ?? 0) + (g.kidCount ?? 0) : null
             return (
               <label key={g.id} className="flex items-center gap-3 py-2.5 cursor-pointer">

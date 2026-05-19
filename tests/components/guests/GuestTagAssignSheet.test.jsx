@@ -30,12 +30,10 @@ describe('GuestTagAssignSheet', () => {
   it('pre-checks guests already in tag', () => {
     render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
     const checkboxes = screen.getAllByRole('checkbox')
-    // Alice (g1) has tag1 → checked
-    expect(checkboxes[0].checked).toBe(true)
-    // Bob (g2) does not → unchecked
-    expect(checkboxes[1].checked).toBe(false)
-    // Charlie (g3) has tag1 → checked
-    expect(checkboxes[2].checked).toBe(true)
+    // selected guests (Alice, Charlie) are sorted to top
+    expect(checkboxes[0].checked).toBe(true)  // Alice or Charlie
+    expect(checkboxes[1].checked).toBe(true)  // Alice or Charlie
+    expect(checkboxes[2].checked).toBe(false) // Bob
   })
 
   it('shows group headcount for group guests', () => {
@@ -45,19 +43,37 @@ describe('GuestTagAssignSheet', () => {
 
   it('toggling a checkbox changes its checked state', () => {
     render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
+    // Bob is unselected and sorted to bottom (index 2)
     const checkboxes = screen.getAllByRole('checkbox')
-    // Bob was unchecked, click to check
-    fireEvent.click(checkboxes[1])
-    expect(checkboxes[1].checked).toBe(true)
+    const bobCheckbox = checkboxes[2]
+    expect(bobCheckbox.checked).toBe(false)
+    fireEvent.click(bobCheckbox)
+    expect(bobCheckbox.checked).toBe(true)
+  })
+
+  it('filters guests by search input', () => {
+    render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
+    const searchInput = screen.getByPlaceholderText(/search guests/i)
+    fireEvent.change(searchInput, { target: { value: 'ali' } })
+    expect(screen.getByText('Alice')).toBeInTheDocument()
+    expect(screen.queryByText('Bob')).not.toBeInTheDocument()
+    expect(screen.queryByText('Charlie')).not.toBeInTheDocument()
+  })
+
+  it('shows selected guests before unselected', () => {
+    render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
+    const names = screen.getAllByRole('checkbox').map(cb => cb.closest('label').textContent.trim())
+    // Alice and Charlie (selected) come before Bob (unselected)
+    expect(names.indexOf('Bob')).toBeGreaterThan(names.indexOf('Alice'))
+    expect(names.indexOf('Bob')).toBeGreaterThan(names.indexOf('Charlie'))
   })
 
   it('save calls updateDoc only for changed guests', async () => {
     render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
-    const checkboxes = screen.getAllByRole('checkbox')
-    // Toggle Bob: add tag1
-    fireEvent.click(checkboxes[1])
-    // Toggle Alice: remove tag1
-    fireEvent.click(checkboxes[0])
+    // Toggle Bob (unselected, at index 2): add tag1
+    fireEvent.click(screen.getByText('Bob').closest('label').querySelector('input'))
+    // Toggle Alice (selected, at index 0): remove tag1
+    fireEvent.click(screen.getByText('Alice').closest('label').querySelector('input'))
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
     await vi.waitFor(() => expect(updateDoc).toHaveBeenCalledTimes(2))
     // Bob: tags should now include tag1
