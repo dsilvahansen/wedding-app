@@ -7,7 +7,14 @@ export function useTags() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'tags'), snap => {
-      setTags(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      raw.sort((a, b) => {
+        const ao = a.order ?? Infinity
+        const bo = b.order ?? Infinity
+        if (ao !== bo) return ao - bo
+        return (a.name ?? '').localeCompare(b.name ?? '')
+      })
+      setTags(raw)
     })
     return unsub
   }, [])
