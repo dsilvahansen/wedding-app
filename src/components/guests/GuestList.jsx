@@ -73,13 +73,27 @@ export default function GuestList({ readOnly }) {
         <span className="text-sm font-semibold text-purple-700">
           {selectionMode ? `${listName} · ${selectedIds.size} selected` : `${listName} (${sorted.reduce((sum, g) => sum + getTotalHeadcount(g), 0)})`}
         </span>
-        {!readOnly && !isContributor(role) && (
-          <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
-            {selectionMode ? 'Done' : 'Select'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {!selectionMode && (
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="text-xs border border-purple-200 rounded px-2 py-1 text-purple-700 bg-purple-50"
+            >
+              <option value="weight">Weight ↓</option>
+              <option value="name">Name A–Z</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          )}
+          {!readOnly && !isContributor(role) && (
+            <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
+              {selectionMode ? 'Done' : 'Select'}
+            </button>
+          )}
+        </div>
       </div>
-      <FilterBar tags={tags} activeTag={activeTag} onTagChange={setActiveTag} sortBy={sortBy} onSortChange={setSortBy} />
+      <FilterBar tags={tags} activeTag={activeTag} onTagChange={setActiveTag} />
       {sorted.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-8">No guests yet</p>
       ) : (

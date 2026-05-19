@@ -1,4 +1,4 @@
-export default function FilterBar({ tags, activeTag, onTagChange, sortBy, onSortChange }) {
+export default function FilterBar({ tags, activeTag, onTagChange }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 overflow-x-auto">
       <button
@@ -16,16 +16,6 @@ export default function FilterBar({ tags, activeTag, onTagChange, sortBy, onSort
           {tag.name}
         </button>
       ))}
-      <select
-        value={sortBy}
-        onChange={e => onSortChange(e.target.value)}
-        className="ml-auto text-xs border border-gray-200 rounded px-2 py-1 text-gray-600"
-      >
-        <option value="weight">Weight ↓</option>
-        <option value="name">Name A–Z</option>
-        <option value="newest">Newest</option>
-        <option value="oldest">Oldest</option>
-      </select>
     </div>
   )
 }
