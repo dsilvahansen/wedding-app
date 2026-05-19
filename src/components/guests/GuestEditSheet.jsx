@@ -15,6 +15,8 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   const [kidCount, setKidCount] = useState(guest?.kidCount ?? 0)
   const [groupNotes, setGroupNotes] = useState(guest?.groupNotes || '')
 
+  if (!guest) return null
+
   const guestOwnerRole = guest?.ownerRole
     ?? (guest?.ownerId === userId
       ? getOwnerRole(role)
@@ -76,8 +78,6 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
       console.error(err)
     }
   }
-
-  if (!guest) return null
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Edit Guest">
