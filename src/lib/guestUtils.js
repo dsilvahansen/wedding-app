@@ -81,6 +81,7 @@ export function getTotalHeadcount(guest) {
 export function getOwnerRole(role) {
   if (role === 'hansen' || role === 'hContributor') return 'hansen'
   if (role === 'lavita' || role === 'lContributor') return 'lavita'
+  if (role == null) return null
   throw new Error(`getOwnerRole: unknown role "${role}"`)
 }
 

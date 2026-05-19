@@ -68,6 +68,7 @@ export default function CombinedList() {
   function getBadge(entry) {
     if (entry.shared) return { label: '★', style: { backgroundColor: '#f39c12', color: '#fff' } }
     const myOwnerRole = getOwnerRole(role)
+    if (!myOwnerRole) return undefined
     const entryOwnerRole = entry.ownerRole ?? (entry.ownerId === user?.uid ? myOwnerRole : (myOwnerRole === 'hansen' ? 'lavita' : 'hansen'))
     const isMyGuest = entryOwnerRole === myOwnerRole
     const label = isMyGuest ? (myOwnerRole === 'hansen' ? 'H' : 'L') : (myOwnerRole === 'hansen' ? 'L' : 'H')
