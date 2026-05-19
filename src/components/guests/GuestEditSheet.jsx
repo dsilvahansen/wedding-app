@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase.js'
-import { calcWeight, isContributor } from '../../lib/guestUtils.js'
+import { calcWeight, isContributor, getOwnerRole } from '../../lib/guestUtils.js'
 import TagPill from '../ui/TagPill.jsx'
 import BottomSheet from '../ui/BottomSheet.jsx'
 
@@ -14,6 +14,13 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   const [adultCount, setAdultCount] = useState(guest?.adultCount ?? 1)
   const [kidCount, setKidCount] = useState(guest?.kidCount ?? 0)
   const [groupNotes, setGroupNotes] = useState(guest?.groupNotes || '')
+
+  const guestOwnerRole = guest?.ownerRole
+    ?? (guest?.ownerId === userId
+      ? getOwnerRole(role)
+      : (getOwnerRole(role) === 'hansen' ? 'lavita' : 'hansen'))
+
+  const rsvpRows = guest?.shared ? ['hansen', 'lavita'] : [guestOwnerRole]
 
   const effectiveWeight = calcWeight(selectedTags, userId, tags, weightOverride, overrideValue)
 
@@ -163,7 +170,7 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
           <div>
             <label className="text-xs text-gray-500 block mb-2">RSVP Status</label>
             <div className="space-y-1 text-sm">
-              {['hansen', 'lavita'].map(r => (
+              {rsvpRows.map(r => (
                 <div key={r} className="flex items-center gap-3">
                   <span className="w-16 text-xs font-medium capitalize">{r === 'hansen' ? 'Hansen (H)' : 'Lavita (L)'}</span>
                   {['saveTheDateSent', 'inviteSent'].map(field => (
