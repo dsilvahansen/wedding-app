@@ -107,7 +107,13 @@ export default function TagsManager() {
     reordered.forEach((tag, idx) => {
       batch.update(doc(db, 'tags', tag.id), { order: idx })
     })
-    await batch.commit()
+    try {
+      await batch.commit()
+      setLocalOrder(null)
+    } catch (err) {
+      console.error('Failed to save tag order:', err)
+      setLocalOrder(null)
+    }
   }
 
   return (

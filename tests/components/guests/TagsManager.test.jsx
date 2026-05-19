@@ -28,6 +28,12 @@ vi.mock('firebase/firestore', () => ({
   writeBatch: vi.fn(() => ({ update: vi.fn(), commit: vi.fn().mockResolvedValue() })),
 }))
 vi.mock('../../../src/firebase.js', () => ({ db: {} }))
+vi.mock('../../../src/components/guests/GuestTagAssignSheet.jsx', () => ({
+  default: ({ tag, open }) => open ? <div>Assign to {tag.name}</div> : null,
+}))
+vi.mock('../../../src/components/guests/TagEditSheet.jsx', () => ({
+  default: () => null,
+}))
 
 import TagsManager from '../../../src/components/guests/TagsManager.jsx'
 
