@@ -75,7 +75,7 @@ describe('GuestTagAssignSheet', () => {
   it('save does not call updateDoc if nothing changed', async () => {
     render(<GuestTagAssignSheet tag={tag} guests={guests} open={true} onClose={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /save/i }))
-    await new Promise(r => setTimeout(r, 50))
+    await Promise.resolve()
     expect(updateDoc).not.toHaveBeenCalled()
   })
 })

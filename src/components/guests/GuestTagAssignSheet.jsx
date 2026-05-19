@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import BottomSheet from '../ui/BottomSheet.jsx'
 
 export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
-  const initialSelected = new Set(
-    guests.filter(g => g.tags?.includes(tag.id)).map(g => g.id)
+  const initialSelectedRef = useRef(
+    new Set(guests.filter(g => g.tags?.includes(tag.id)).map(g => g.id))
   )
-  const [selected, setSelected] = useState(initialSelected)
+  const [selected, setSelected] = useState(() => new Set(initialSelectedRef.current))
+  const [saving, setSaving] = useState(false)
 
   function toggle(guestId) {
     setSelected(prev => {
@@ -23,19 +24,26 @@ export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
 
   async function handleSave() {
     const writes = guests.filter(g => {
-      const wasSelected = initialSelected.has(g.id)
+      const wasSelected = initialSelectedRef.current.has(g.id)
       const isSelected = selected.has(g.id)
       return wasSelected !== isSelected
     })
-    await Promise.all(
-      writes.map(g => {
-        const newTags = selected.has(g.id)
-          ? [...(g.tags ?? []), tag.id]
-          : (g.tags ?? []).filter(id => id !== tag.id)
-        return updateDoc(doc(db, 'guests', g.id), { tags: newTags })
-      })
-    )
-    onClose()
+    setSaving(true)
+    try {
+      await Promise.all(
+        writes.map(g => {
+          const newTags = selected.has(g.id)
+            ? [...new Set([...(g.tags ?? []), tag.id])]
+            : (g.tags ?? []).filter(id => id !== tag.id)
+          return updateDoc(doc(db, 'guests', g.id), { tags: newTags })
+        })
+      )
+      onClose()
+    } catch (err) {
+      console.error('Failed to update tag assignments:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const assignedCount = selected.size
@@ -67,9 +75,10 @@ export default function GuestTagAssignSheet({ tag, guests, open, onClose }) {
         <button
           type="button"
           onClick={handleSave}
-          className="w-full bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold mt-2"
+          disabled={saving}
+          className="w-full bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold mt-2 disabled:opacity-50"
         >
-          Save
+          {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
     </BottomSheet>
