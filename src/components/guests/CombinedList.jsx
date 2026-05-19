@@ -134,6 +134,8 @@ export default function CombinedList() {
         >
           <option value="weight">Weight ↓</option>
           <option value="name">Name A–Z</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
         </select>
       </div>
       )}

@@ -65,6 +65,8 @@ export function deduplicateForCombined(guests) {
 export function sortGuests(guests, sortBy = 'weight') {
   return [...guests].sort((a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name)
+    if (sortBy === 'newest') return (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0)
+    if (sortBy === 'oldest') return (a.createdAt?.toMillis() ?? 0) - (b.createdAt?.toMillis() ?? 0)
     return b.weight - a.weight
   })
 }
