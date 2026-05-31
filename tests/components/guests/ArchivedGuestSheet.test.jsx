@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn().mockReturnValue({}),
@@ -20,7 +20,14 @@ const guests = [
 ]
 
 describe('ArchivedGuestSheet', () => {
-  beforeEach(() => { updateDoc.mockClear() })
+  beforeEach(() => {
+    updateDoc.mockClear()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   it('renders archived guest names', () => {
     render(<ArchivedGuestSheet guests={guests} tags={tags} open={true} onClose={() => {}} readOnly={false} />)
@@ -51,5 +58,13 @@ describe('ArchivedGuestSheet', () => {
   it('hides Select button in readOnly mode', () => {
     render(<ArchivedGuestSheet guests={guests} tags={tags} open={true} onClose={() => {}} readOnly={true} />)
     expect(screen.queryByRole('button', { name: /select/i })).not.toBeInTheDocument()
+  })
+
+  it('shows unarchive action sheet on long-press of archived guest', async () => {
+    render(<ArchivedGuestSheet guests={guests} tags={tags} open={true} onClose={() => {}} readOnly={false} />)
+    const rows = screen.getAllByTestId('guest-row')
+    fireEvent.mouseDown(rows[0])
+    await vi.advanceTimersByTimeAsync(500)
+    expect(screen.getByRole('button', { name: /^unarchive$/i })).toBeInTheDocument()
   })
 })

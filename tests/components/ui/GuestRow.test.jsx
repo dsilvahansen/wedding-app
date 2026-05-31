@@ -105,15 +105,6 @@ describe('GuestRow', () => {
     expect(onLongPress).not.toHaveBeenCalled()
   })
 
-  it('does not call onLongPress when readOnly', async () => {
-    const onLongPress = vi.fn()
-    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={true} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
-    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
-    fireEvent.mouseDown(row)
-    await vi.advanceTimersByTimeAsync(500)
-    expect(onLongPress).not.toHaveBeenCalled()
-  })
-
   it('calls onLongPress after 500ms touch hold', async () => {
     const onLongPress = vi.fn()
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)

@@ -9,7 +9,7 @@ export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpTog
   const longPressActivated = useRef(false)
 
   function handlePointerDown() {
-    if (readOnly || !onLongPress) return
+    if (!onLongPress) return
     clearTimeout(timerRef.current)
     longPressActivated.current = false
     timerRef.current = setTimeout(() => {
