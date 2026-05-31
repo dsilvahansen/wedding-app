@@ -14,6 +14,7 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   const [adultCount, setAdultCount] = useState(guest?.adultCount ?? 1)
   const [kidCount, setKidCount] = useState(guest?.kidCount ?? 0)
   const [groupNotes, setGroupNotes] = useState(guest?.groupNotes || '')
+  const [showUnarchivePrompt, setShowUnarchivePrompt] = useState(false)
 
   if (!guest) return null
 
@@ -74,12 +75,26 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
     }
     try {
       await updateDoc(doc(db, 'guests', guest.id), { rsvp, updatedAt: serverTimestamp() })
+      if (guest.archived) {
+        setShowUnarchivePrompt(true)
+      }
     } catch (err) {
       console.error(err)
     }
   }
 
+  async function handleUnarchive() {
+    try {
+      await updateDoc(doc(db, 'guests', guest.id), { archived: false, updatedAt: serverTimestamp() })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setShowUnarchivePrompt(false)
+    }
+  }
+
   return (
+    <>
     <BottomSheet open={open} onClose={onClose} title="Edit Guest">
       <div className="space-y-4">
         <div>
@@ -200,5 +215,31 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
         </div>
       </div>
     </BottomSheet>
+      {showUnarchivePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-5 mx-4 max-w-sm w-full space-y-3">
+            <p className="text-sm font-semibold text-gray-800 text-center">
+              {guest.name} has an RSVP update. Unarchive them?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUnarchivePrompt(false)}
+                className="flex-1 border border-gray-300 rounded-xl py-2 text-sm text-gray-600"
+              >
+                Keep archived
+              </button>
+              <button
+                type="button"
+                onClick={handleUnarchive}
+                className="flex-1 bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold"
+              >
+                Unarchive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
