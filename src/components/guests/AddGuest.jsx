@@ -22,6 +22,7 @@ export default function AddGuest() {
   const [addingTag, setAddingTag] = useState(false)
   const [toast, setToast] = useState(null)
   const [suggestions, setSuggestions] = useState([])
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false)
   const [duplicateWarning, setDuplicateWarning] = useState(null)
   const [linkedGuestId, setLinkedGuestId] = useState(null)
   const [isGroup, setIsGroup] = useState(false)
@@ -37,10 +38,11 @@ export default function AddGuest() {
   function handleNameChange(val) {
     setName(val)
     setLinkedGuestId(null)
+    setSuggestionsExpanded(false)
     if (val.length < 2) { setSuggestions([]); setDuplicateWarning(null); return }
     const lower = val.toLowerCase()
     const matches = guests.filter(g => g.name.toLowerCase().includes(lower))
-    setSuggestions(matches.slice(0, 5))
+    setSuggestions(matches)
     const dups = findDuplicates(val, user?.uid, guests)
     setDuplicateWarning(dups.length > 0 ? dups[0] : null)
   }
@@ -127,7 +129,7 @@ export default function AddGuest() {
         {/* Suggestions dropdown */}
         {suggestions.length > 0 && (
           <div className="border border-purple-200 rounded-lg mt-1 bg-white shadow-sm overflow-hidden">
-            {suggestions.map(g => {
+            {(suggestionsExpanded ? suggestions : suggestions.slice(0, 5)).map(g => {
               const gTags = (g.tags || []).map(id => tags.find(t => t.id === id)).filter(Boolean)
               return (
                 <button
@@ -141,6 +143,15 @@ export default function AddGuest() {
                 </button>
               )
             })}
+            {!suggestionsExpanded && suggestions.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setSuggestionsExpanded(true)}
+                className="w-full text-center px-3 py-2 text-xs text-purple-500 font-medium border-t border-gray-100 hover:bg-purple-50"
+              >
+                See {suggestions.length - 5} more
+              </button>
+            )}
           </div>
         )}
         {/* Duplicate warning */}
