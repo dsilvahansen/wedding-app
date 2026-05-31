@@ -89,7 +89,7 @@ export default function GuestList({ readOnly }) {
               <option value="oldest">Oldest</option>
             </select>
           )}
-          {!selectionMode && archivedGuests.length > 0 && (
+          {!selectionMode && !readOnly && archivedGuests.length > 0 && (
             <button
               type="button"
               onClick={() => setShowArchived(true)}
