@@ -79,4 +79,9 @@ describe('GuestList', () => {
     fireEvent.click(screen.getByRole('button', { name: /archived \(1\)/i }))
     expect(await screen.findByText(/archived guests/i)).toBeInTheDocument()
   })
+
+  it('does not show Archive button when not in selection mode', () => {
+    render(<GuestList readOnly={false} />)
+    expect(screen.queryByRole('button', { name: /^archive$/i })).not.toBeInTheDocument()
+  })
 })

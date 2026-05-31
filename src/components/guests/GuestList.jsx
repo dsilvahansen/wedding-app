@@ -28,7 +28,7 @@ export default function GuestList({ readOnly }) {
   const [showArchived, setShowArchived] = useState(false)
   const [longPressGuest, setLongPressGuest] = useState(null)
 
-  const fieldLabel = { saveTheDateSent: 'save-the-date sent', inviteSent: 'invite sent', confirmed: 'confirmed' }
+  const fieldLabel = { saveTheDateSent: 'save-the-date sent', inviteSent: 'invite sent', confirmed: 'confirmed', archive: 'archive' }
 
   const partnerRole = role === 'hansen' ? 'lavita' : 'hansen'
   const partnerName = role === 'hansen' ? 'Lavita' : 'Hansen'
@@ -68,6 +68,19 @@ export default function GuestList({ readOnly }) {
   async function handleApply() {
     if (!pendingField) return
     const count = selectedIds.size
+    if (pendingField === 'archive') {
+      try {
+        const selected = [...selectedIds]
+        await Promise.all(selected.map(id => updateDoc(doc(db, 'guests', id), { archived: true, updatedAt: serverTimestamp() })))
+        setPendingField(null)
+        toggleSelectionMode()
+        setToast({ message: `${count} guest${count > 1 ? 's' : ''} archived` })
+      } catch {
+        setPendingField(null)
+        setToast({ message: 'Failed to archive. Try again.' })
+      }
+      return
+    }
     const err = await applyBulkAction(pendingField, guests)
     setPendingField(null)
     if (err) {
@@ -194,6 +207,7 @@ export default function GuestList({ readOnly }) {
                 <button type="button" onClick={() => setPendingField('saveTheDateSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">📅 STD</button>
                 <button type="button" onClick={() => setPendingField('inviteSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✉️ Invite</button>
                 <button type="button" onClick={() => setPendingField('confirmed')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✅</button>
+                <button type="button" onClick={() => setPendingField('archive')} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg">📦 Archive</button>
               </div>
             </div>
           )}
