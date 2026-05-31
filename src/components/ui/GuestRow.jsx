@@ -6,10 +6,14 @@ import { getTotalHeadcount } from '../../lib/guestUtils.js'
 export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpToggle, onEdit, badge, selectionMode = false, selected = false, onLongPress }) {
   const guestTags = (guest.tags || []).map(id => tags.find(t => t.id === id)).filter(Boolean)
   const timerRef = useRef(null)
+  const longPressActivated = useRef(false)
 
   function handlePointerDown() {
     if (readOnly || !onLongPress) return
+    clearTimeout(timerRef.current)
+    longPressActivated.current = false
     timerRef.current = setTimeout(() => {
+      longPressActivated.current = true
       onLongPress()
     }, 500)
   }
@@ -18,15 +22,29 @@ export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpTog
     clearTimeout(timerRef.current)
   }
 
+  function handleTouchStart(e) {
+    e.preventDefault()
+    handlePointerDown()
+  }
+
+  function handleClick() {
+    if (longPressActivated.current) {
+      longPressActivated.current = false
+      return
+    }
+    if (!readOnly || selectionMode) onEdit?.()
+  }
+
   return (
     <div
       data-testid="guest-row"
       className={`flex items-center gap-2 px-3 py-2 border-b border-gray-100 ${!readOnly || selectionMode ? 'cursor-pointer active:bg-purple-50' : ''}`}
-      onClick={!readOnly || selectionMode ? onEdit : undefined}
+      onClick={handleClick}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
-      onTouchStart={handlePointerDown}
+      onTouchStart={handleTouchStart}
       onTouchEnd={handlePointerUp}
+      onTouchCancel={handlePointerUp}
     >
       {selectionMode && (
         <input type="checkbox" readOnly checked={selected} className="accent-purple-500 w-4 h-4 shrink-0" />

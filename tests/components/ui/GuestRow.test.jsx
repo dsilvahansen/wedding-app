@@ -113,4 +113,47 @@ describe('GuestRow', () => {
     await vi.advanceTimersByTimeAsync(500)
     expect(onLongPress).not.toHaveBeenCalled()
   })
+
+  it('calls onLongPress after 500ms touch hold', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.touchStart(row, { touches: [{}] })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).toHaveBeenCalled()
+  })
+
+  it('does not call onLongPress if touch released before 500ms', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.touchStart(row, { touches: [{}] })
+    await vi.advanceTimersByTimeAsync(200)
+    fireEvent.touchEnd(row)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
+
+  it('cancels long-press on touchcancel', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.touchStart(row, { touches: [{}] })
+    await vi.advanceTimersByTimeAsync(200)
+    fireEvent.touchCancel(row)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
+
+  it('does not call onEdit when long-press activated', async () => {
+    const onEdit = vi.fn()
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={onEdit} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.mouseDown(row)
+    await vi.advanceTimersByTimeAsync(500)
+    fireEvent.click(row)
+    expect(onLongPress).toHaveBeenCalled()
+    expect(onEdit).not.toHaveBeenCalled()
+  })
 })
