@@ -1,14 +1,32 @@
+import { useRef } from 'react'
 import TagPill from './TagPill.jsx'
 import RsvpIcons from './RsvpIcons.jsx'
 import { getTotalHeadcount } from '../../lib/guestUtils.js'
 
-export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpToggle, onEdit, badge, selectionMode = false, selected = false }) {
+export default function GuestRow({ guest, tags, currentRole, readOnly, onRsvpToggle, onEdit, badge, selectionMode = false, selected = false, onLongPress }) {
   const guestTags = (guest.tags || []).map(id => tags.find(t => t.id === id)).filter(Boolean)
+  const timerRef = useRef(null)
+
+  function handlePointerDown() {
+    if (readOnly || !onLongPress) return
+    timerRef.current = setTimeout(() => {
+      onLongPress()
+    }, 500)
+  }
+
+  function handlePointerUp() {
+    clearTimeout(timerRef.current)
+  }
 
   return (
     <div
+      data-testid="guest-row"
       className={`flex items-center gap-2 px-3 py-2 border-b border-gray-100 ${!readOnly || selectionMode ? 'cursor-pointer active:bg-purple-50' : ''}`}
       onClick={!readOnly || selectionMode ? onEdit : undefined}
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
     >
       {selectionMode && (
         <input type="checkbox" readOnly checked={selected} className="accent-purple-500 w-4 h-4 shrink-0" />

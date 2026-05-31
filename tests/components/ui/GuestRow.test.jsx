@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import GuestRow from '../../../src/components/ui/GuestRow.jsx'
 
 const guest = {
@@ -17,6 +17,14 @@ const guest = {
 const tags = [{ id: 't1', name: 'Family', color: '#e8f4e8', createdByInitial: 'H', weights: {} }]
 
 describe('GuestRow', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('renders guest name', () => {
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} />)
     expect(screen.getByText('John Smith')).toBeInTheDocument()
@@ -75,5 +83,34 @@ describe('GuestRow', () => {
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={onEdit} selectionMode={true} selected={false} />)
     fireEvent.click(screen.getByText('John Smith'))
     expect(onEdit).toHaveBeenCalled()
+  })
+
+  it('calls onLongPress after 500ms hold', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.mouseDown(row)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).toHaveBeenCalled()
+  })
+
+  it('does not call onLongPress if released before 500ms', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.mouseDown(row)
+    await vi.advanceTimersByTimeAsync(200)
+    fireEvent.mouseUp(row)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
+
+  it('does not call onLongPress when readOnly', async () => {
+    const onLongPress = vi.fn()
+    render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={true} onRsvpToggle={() => {}} onEdit={() => {}} onLongPress={onLongPress} />)
+    const row = screen.getByText('John Smith').closest('div[data-testid="guest-row"]')
+    fireEvent.mouseDown(row)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onLongPress).not.toHaveBeenCalled()
   })
 })
