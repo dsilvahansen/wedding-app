@@ -24,6 +24,7 @@ export default function GuestList({ readOnly }) {
   const [addingGuest, setAddingGuest] = useState(false)
   const [pendingField, setPendingField] = useState(null)
   const [toast, setToast] = useState(null)
+  const [showArchived, setShowArchived] = useState(false)
 
   const fieldLabel = { saveTheDateSent: 'save-the-date sent', inviteSent: 'invite sent', confirmed: 'confirmed' }
 
@@ -38,7 +39,9 @@ export default function GuestList({ readOnly }) {
     return readOnly ? guestSide !== myOwnerRole : guestSide === myOwnerRole
   }) : []
 
-  const filtered = activeTag ? myGuests.filter(g => g.tags?.includes(activeTag)) : myGuests
+  const activeGuests = myGuests.filter(g => !g.archived)
+  const archivedGuests = myGuests.filter(g => g.archived)
+  const filtered = activeTag ? activeGuests.filter(g => g.tags?.includes(activeTag)) : activeGuests
   const sorted = sortGuests(filtered, sortBy)
   const listName = readOnly ? `${partnerName}'s List` : 'My List'
 
@@ -85,6 +88,15 @@ export default function GuestList({ readOnly }) {
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
             </select>
+          )}
+          {!selectionMode && archivedGuests.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived(true)}
+              className="text-xs text-gray-500 border border-gray-300 rounded px-2 py-1 bg-white"
+            >
+              Archived ({archivedGuests.length})
+            </button>
           )}
           {!readOnly && !isContributor(role) && (
             <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
