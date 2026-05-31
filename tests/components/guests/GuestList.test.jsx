@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../../src/hooks/useAuth.js', () => ({
@@ -30,6 +30,9 @@ vi.mock('../../../src/hooks/useBulkSelect.js', () => ({
 }))
 vi.mock('firebase/firestore', () => ({ doc: vi.fn(), updateDoc: vi.fn(), deleteDoc: vi.fn(), serverTimestamp: vi.fn() }))
 vi.mock('../../../src/firebase.js', () => ({ db: {} }))
+vi.mock('../../../src/components/guests/ArchivedGuestSheet.jsx', () => ({
+  default: ({ open }) => open ? <div>Archived Guests</div> : null,
+}))
 
 import GuestList from '../../../src/components/guests/GuestList.jsx'
 
@@ -69,5 +72,11 @@ describe('GuestList', () => {
   it('does not show Archived button on partner list side', () => {
     render(<GuestList readOnly={true} />)
     expect(screen.queryByRole('button', { name: /archived/i })).not.toBeInTheDocument()
+  })
+
+  it('opens archived sheet when Archived button clicked', async () => {
+    render(<GuestList readOnly={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /archived \(1\)/i }))
+    expect(await screen.findByText(/archived guests/i)).toBeInTheDocument()
   })
 })

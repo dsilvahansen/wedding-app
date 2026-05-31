@@ -12,6 +12,7 @@ import GuestEditSheet from './GuestEditSheet.jsx'
 import AddGuest from './AddGuest.jsx'
 import BottomSheet from '../ui/BottomSheet.jsx'
 import Toast from '../ui/Toast.jsx'
+import ArchivedGuestSheet from './ArchivedGuestSheet.jsx'
 
 export default function GuestList({ readOnly }) {
   const { user, role } = useAuth()
@@ -25,6 +26,7 @@ export default function GuestList({ readOnly }) {
   const [pendingField, setPendingField] = useState(null)
   const [toast, setToast] = useState(null)
   const [showArchived, setShowArchived] = useState(false)
+  const [longPressGuest, setLongPressGuest] = useState(null)
 
   const fieldLabel = { saveTheDateSent: 'save-the-date sent', inviteSent: 'invite sent', confirmed: 'confirmed' }
 
@@ -56,6 +58,11 @@ export default function GuestList({ readOnly }) {
       rsvp[role] = { ...rsvp[role], [field]: !rsvp[role]?.[field] }
     }
     await updateDoc(doc(db, 'guests', guestId), { rsvp, updatedAt: serverTimestamp() })
+  }
+
+  async function handleArchiveGuest(guestId) {
+    await updateDoc(doc(db, 'guests', guestId), { archived: true, updatedAt: serverTimestamp() })
+    setLongPressGuest(null)
   }
 
   async function handleApply() {
@@ -125,9 +132,38 @@ export default function GuestList({ readOnly }) {
               selectionMode={selectionMode}
               selected={selectedIds.has(guest.id)}
               badge={selectionMode ? undefined : badge}
+              onLongPress={!readOnly && !selectionMode ? () => setLongPressGuest(guest) : undefined}
             />
           )
         })
+      )}
+      {longPressGuest && (
+        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLongPressGuest(null)}>
+          <div className="w-full bg-white rounded-t-2xl shadow-xl p-4 space-y-2" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-center text-gray-700 pb-1">{longPressGuest.name}</p>
+            <button
+              type="button"
+              onClick={() => { setLongPressGuest(null); setEditingGuest(longPressGuest) }}
+              className="w-full text-sm text-gray-700 py-3 border-t border-gray-100 text-center"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => handleArchiveGuest(longPressGuest.id)}
+              className="w-full text-sm text-orange-500 font-medium py-3 border-t border-gray-100 text-center"
+            >
+              Archive
+            </button>
+            <button
+              type="button"
+              onClick={() => setLongPressGuest(null)}
+              className="w-full text-sm text-gray-500 py-3 border-t border-gray-100 text-center"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
       {editingGuest && (
         <GuestEditSheet
@@ -187,6 +223,15 @@ export default function GuestList({ readOnly }) {
         <BottomSheet open={addingGuest} onClose={() => setAddingGuest(false)} title="Add Guest">
           <AddGuest />
         </BottomSheet>
+      )}
+      {showArchived && (
+        <ArchivedGuestSheet
+          guests={archivedGuests}
+          tags={tags}
+          open={showArchived}
+          onClose={() => setShowArchived(false)}
+          readOnly={readOnly}
+        />
       )}
     </div>
   )
