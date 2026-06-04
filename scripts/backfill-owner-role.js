@@ -17,25 +17,27 @@
  * 1. Load all `users` docs → build a uid → ownerRole map.
  * 2. Query all guests where ownerRole is not set.
  * 3. For each legacy guest, look up ownerRole from the users map via ownerId.
- * 4. Batch-write { ownerRole } onto each doc (Firestore max 500 per batch).
+ * 4. PATCH each doc (only the ownerRole field — no other data touched).
  * 5. Log results and save any warnings to scripts/backfill-warnings.md.
+ *
+ * Uses the Firestore REST API directly (no firebase-admin package needed).
  *
  * Usage
  * -----
  *   # Dry run — logs what would change, writes nothing:
- *   node scripts/backfill-owner-role.js --dry-run
+ *   GOOGLE_APPLICATION_CREDENTIALS=../FOLDER/serviceAccount.json \
+ *     node scripts/backfill-owner-role.js --dry-run
  *
  *   # Live run:
- *   GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccount.json \
+ *   GOOGLE_APPLICATION_CREDENTIALS=../FOLDER/serviceAccount.json \
  *     node scripts/backfill-owner-role.js
  */
 
-const { db } = require('./firebase-admin')
+const { getToken, firestoreGetCollection, firestoreQueryMissingField, firestorePatch } = require('./firebase-admin')
 const fs = require('fs')
 const path = require('path')
 
 const DRY_RUN = process.argv.includes('--dry-run')
-const BATCH_SIZE = 500 // Firestore hard limit per batch commit
 
 /**
  * Maps any role value (including contributor roles) to the owning side.
@@ -50,117 +52,118 @@ function getOwnerRole(role) {
   return null
 }
 
+/** Read a Firestore string field value safely */
+function str(fields, key) {
+  return fields[key]?.stringValue ?? null
+}
+
 async function main() {
   console.log(DRY_RUN ? '[DRY RUN] No writes will be made.\n' : '[LIVE RUN] Writing to Firestore.\n')
 
+  const token = await getToken()
+
   // --- Step 1: Build uid → ownerRole map from users collection ---
   console.log('Loading users collection...')
-  const usersSnap = await db.collection('users').get()
+  const userDocs = await firestoreGetCollection('users', token)
+
   // Map of Firebase UID → normalized ownerRole ('hansen' or 'lavita')
   const uidToOwnerRole = {}
-  usersSnap.forEach(doc => {
-    const role = doc.data().role
+  for (const doc of userDocs) {
+    const role = str(doc.fields, 'role')
     const ownerRole = getOwnerRole(role)
     if (ownerRole) {
       uidToOwnerRole[doc.id] = ownerRole
     } else {
       console.warn(`[WARN] users/${doc.id} has unrecognised role "${role}" — will be skipped if they own guests`)
     }
-  })
+  }
   console.log(`  ${Object.keys(uidToOwnerRole).length} users loaded.\n`)
 
   // --- Step 2: Find all guests missing ownerRole ---
-  // Firestore treats a missing field and a null field differently.
-  // We check for both: documents where the field doesn't exist are returned
-  // by the == null filter in the Admin SDK.
+  // The == null query matches both missing fields and explicitly null fields.
   console.log('Querying guests without ownerRole...')
-  const guestsSnap = await db.collection('guests')
-    .where('ownerRole', '==', null)
-    .get()
-  console.log(`  ${guestsSnap.size} legacy guest(s) found.\n`)
+  const legacyGuests = await firestoreQueryMissingField('guests', 'ownerRole', token)
+  console.log(`  ${legacyGuests.length} legacy guest(s) found.\n`)
 
-  if (guestsSnap.size === 0) {
+  if (legacyGuests.length === 0) {
     console.log('Nothing to do. All guests already have ownerRole.')
+    writeWarningsFile([], false)
     process.exit(0)
   }
 
   // --- Step 3: Resolve ownerRole for each legacy guest ---
-  const toUpdate = []   // { ref, ownerRole } for guests we can fix
-  const warnings = []   // human-readable lines for the warnings file
+  const toUpdate = []  // { name: doc.name, guestName, ownerRole } for guests we can fix
+  const warnings = []  // human-readable lines for the warnings file
 
-  guestsSnap.forEach(doc => {
-    const { name, ownerId } = doc.data()
-    const ownerRole = uidToOwnerRole[ownerId]
+  for (const doc of legacyGuests) {
+    const guestName = str(doc.fields, 'name') ?? '(unnamed)'
+    const ownerId = str(doc.fields, 'ownerId')
+    const ownerRole = ownerId ? uidToOwnerRole[ownerId] : null
 
     if (!ownerRole) {
       // ownerId not found in users collection — cannot safely assign a side
-      const msg = `guest/${doc.id} (name: "${name}") — ownerId "${ownerId}" not found in users collection`
+      const msg = `guest/${doc.id} (name: "${guestName}") — ownerId "${ownerId}" not found in users collection`
       console.warn(`[WARN] ${msg}`)
       warnings.push(msg)
     } else {
-      toUpdate.push({ ref: doc.ref, ownerRole, name })
+      toUpdate.push({ name: doc.name, guestName, ownerRole })
     }
-  })
+  }
 
   console.log(`  ${toUpdate.length} guest(s) will be updated.`)
   console.log(`  ${warnings.length} guest(s) skipped (see warnings).\n`)
 
-  // --- Step 4: Batch-write in chunks of BATCH_SIZE ---
+  // --- Step 4: Patch each guest doc (only the ownerRole field) ---
   if (!DRY_RUN) {
-    for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
-      const chunk = toUpdate.slice(i, i + BATCH_SIZE)
-      const batch = db.batch()
-      chunk.forEach(({ ref, ownerRole }) => {
-        // Only set the missing field — do not overwrite any other guest data
-        batch.update(ref, { ownerRole })
-      })
-      await batch.commit()
-      console.log(`  Committed batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} docs)`)
+    let count = 0
+    for (const { name, guestName, ownerRole } of toUpdate) {
+      // firestorePatch uses updateMask so only ownerRole is written
+      await firestorePatch(name, 'ownerRole', ownerRole, token)
+      count++
+      if (count % 20 === 0) console.log(`  ...patched ${count}/${toUpdate.length}`)
     }
-    console.log('\nAll batches committed successfully.')
+    console.log(`\nAll ${toUpdate.length} guest(s) patched successfully.`)
   } else {
-    toUpdate.forEach(({ name, ownerRole }) => {
-      console.log(`  [DRY RUN] Would set ownerRole="${ownerRole}" on guest "${name}"`)
-    })
+    for (const { guestName, ownerRole } of toUpdate) {
+      console.log(`  [DRY RUN] Would set ownerRole="${ownerRole}" on guest "${guestName}"`)
+    }
   }
 
   // --- Step 5: Save warnings to file ---
+  writeWarningsFile(warnings, DRY_RUN)
+
+  // Summary
+  console.log('\n--- Summary ---')
+  console.log(`  Found   : ${legacyGuests.length}`)
+  console.log(`  Updated : ${DRY_RUN ? 0 : toUpdate.length} (dry run: ${DRY_RUN})`)
+  console.log(`  Skipped : ${warnings.length}`)
+}
+
+function writeWarningsFile(warnings, dryRun) {
   const warningsPath = path.join(__dirname, 'backfill-warnings.md')
+  const lines = [
+    '# Backfill `ownerRole` — Run Record',
+    '',
+    `Run date: ${new Date().toISOString()}`,
+    `Dry run: ${dryRun}`,
+    '',
+  ]
+
   if (warnings.length > 0) {
-    const lines = [
-      '# Backfill `ownerRole` — Warnings',
-      '',
-      `Run date: ${new Date().toISOString()}`,
-      `Dry run: ${DRY_RUN}`,
-      '',
+    lines.push(
       'The following guests could not be patched because their `ownerId` was',
       'not found in the `users` collection. Manual review required.',
       '',
       ...warnings.map(w => `- ${w}`),
       '',
-    ]
-    fs.writeFileSync(warningsPath, lines.join('\n'), 'utf8')
+    )
     console.log(`\n[WARN] ${warnings.length} warning(s) written to scripts/backfill-warnings.md`)
   } else {
-    // Write a clean run note so there's always a record
-    const lines = [
-      '# Backfill `ownerRole` — Warnings',
-      '',
-      `Run date: ${new Date().toISOString()}`,
-      `Dry run: ${DRY_RUN}`,
-      '',
-      'No warnings. All legacy guests were patched successfully.',
-      '',
-    ]
-    fs.writeFileSync(warningsPath, lines.join('\n'), 'utf8')
+    lines.push('No warnings. All legacy guests were patched successfully.', '')
     console.log('\nNo warnings. Clean run record written to scripts/backfill-warnings.md')
   }
 
-  // Summary
-  console.log('\n--- Summary ---')
-  console.log(`  Found   : ${guestsSnap.size}`)
-  console.log(`  Updated : ${DRY_RUN ? 0 : toUpdate.length} (dry run: ${DRY_RUN})`)
-  console.log(`  Skipped : ${warnings.length}`)
+  fs.writeFileSync(warningsPath, lines.join('\n'), 'utf8')
 }
 
 main().catch(err => {
