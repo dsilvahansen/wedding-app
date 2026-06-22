@@ -14,7 +14,13 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   const [adultCount, setAdultCount] = useState(guest?.adultCount ?? 1)
   const [kidCount, setKidCount] = useState(guest?.kidCount ?? 0)
   const [groupNotes, setGroupNotes] = useState(guest?.groupNotes || '')
+  // Local rsvp state so toggles reflect immediately without waiting for Firestore snapshot
+  const [rsvp, setRsvp] = useState(guest?.rsvp ?? { hansen: {}, lavita: {}, confirmed: false })
   const [showUnarchivePrompt, setShowUnarchivePrompt] = useState(false)
+  // Notes collapsed by default; auto-expanded if the guest already has notes
+  const [notesOpen, setNotesOpen] = useState(!!(guest?.groupNotes))
+  // Weight editing hidden by default; revealed inline when user taps "Edit"
+  const [weightEditing, setWeightEditing] = useState(false)
 
   if (!guest) return null
 
@@ -67,19 +73,21 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   }
 
   async function handleRsvpToggle(field) {
-    const rsvp = { ...guest.rsvp }
+    const updated = { ...rsvp }
     if (field === 'confirmed') {
-      rsvp.confirmed = !rsvp.confirmed
+      updated.confirmed = !rsvp.confirmed
     } else {
-      rsvp[role] = { ...rsvp[role], [field]: !rsvp[role]?.[field] }
+      updated[getOwnerRole(role)] = { ...rsvp[getOwnerRole(role)], [field]: !rsvp[getOwnerRole(role)]?.[field] }
     }
+    setRsvp(updated)
     try {
-      await updateDoc(doc(db, 'guests', guest.id), { rsvp, updatedAt: serverTimestamp() })
+      await updateDoc(doc(db, 'guests', guest.id), { rsvp: updated, updatedAt: serverTimestamp() })
       if (guest.archived) {
         setShowUnarchivePrompt(true)
       }
     } catch (err) {
       console.error(err)
+      setRsvp(rsvp) // revert on failure
     }
   }
 
@@ -93,128 +101,222 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
     }
   }
 
+  // Separate selected tags to front, unselected after
+  const sortedTags = [
+    ...tags.filter(t => selectedTags.includes(t.id)),
+    ...tags.filter(t => !selectedTags.includes(t.id)),
+  ]
+
   return (
     <>
-    <BottomSheet open={open} onClose={onClose} title="Edit Guest">
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs text-gray-500">Name</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500">Tags</label>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {tags.map(tag => (
-              <TagPill key={tag.id} tag={tag} selected={selectedTags.includes(tag.id)} onClick={() => toggleTag(tag.id)} />
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Weight</span>
-          <input
-            type="number" min="1" max="10"
-            value={weightOverride ? (overrideValue ?? effectiveWeight) : effectiveWeight}
-            onChange={e => { setOverrideValue(Number(e.target.value)); setWeightOverride(true) }}
-            className="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-center"
-          />
-          {weightOverride && (
-            <button type="button" onClick={() => { setWeightOverride(false); setOverrideValue(null) }} className="text-xs text-gray-400 underline">reset</button>
-          )}
-        </div>
+      <BottomSheet open={open} onClose={onClose} title="Edit Guest">
+        <div className="space-y-4">
 
-        {/* Family / Group toggle */}
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isGroup ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
-          <label htmlFor="editIsGroupToggle" className={`text-xs font-medium cursor-pointer select-none ${isGroup ? 'text-purple-600' : 'text-gray-500'}`}>
-            👨‍👩‍👧 Family / Group
-          </label>
-          <input
-            id="editIsGroupToggle"
-            type="checkbox"
-            aria-label="Family / Group"
-            checked={isGroup}
-            onChange={e => {
-              setIsGroup(e.target.checked)
-              if (!e.target.checked) {
-                setAdultCount(1)
-                setKidCount(0)
-                setGroupNotes('')
-              }
-            }}
-            className="ml-auto accent-purple-500 w-4 h-4 cursor-pointer"
-          />
-        </div>
-
-        {isGroup && (
-          <div className="flex gap-3">
-            <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
-              <p className="text-xs text-gray-500 mb-1">Adults</p>
-              <div className="flex items-center justify-center gap-4">
-                <button type="button" aria-label="−" onClick={() => setAdultCount(c => Math.max(1, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
-                <span className="font-bold text-sm w-4 text-center">{adultCount}</span>
-                <button type="button" aria-label="+" onClick={() => setAdultCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
-              </div>
-            </div>
-            <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
-              <p className="text-xs text-gray-500 mb-1">Kids</p>
-              <div className="flex items-center justify-center gap-4">
-                <button type="button" aria-label="−" onClick={() => setKidCount(c => Math.max(0, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
-                <span className="font-bold text-sm w-4 text-center">{kidCount}</span>
-                <button type="button" aria-label="+" onClick={() => setKidCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Notes (always visible) */}
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
-          <p className="text-xs text-gray-500 mb-1">Notes (optional)</p>
-          <textarea
-            value={groupNotes}
-            onChange={e => setGroupNotes(e.target.value)}
-            placeholder="e.g. John, Jane + 1 kid..."
-            rows={2}
-            className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-purple-300"
-          />
-        </div>
-
-        {!isContributor(role) && (
+          {/* ── NAME ── */}
           <div>
-            <label className="text-xs text-gray-500 block mb-2">RSVP Status</label>
-            <div className="space-y-1 text-sm">
-              {rsvpRows.map(r => (
-                <div key={r} className="flex items-center gap-3">
-                  <span className="w-16 text-xs font-medium capitalize">{r === 'hansen' ? 'Hansen (H)' : 'Lavita (L)'}</span>
-                  {['saveTheDateSent', 'inviteSent'].map(field => (
-                    <label key={field} className="flex items-center gap-1 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={guest.rsvp[r]?.[field] || false}
-                        onChange={() => handleRsvpToggle(field)}
-                        disabled={r !== role}
-                      />
-                      {field === 'saveTheDateSent' ? '📅' : '✉️'}
-                    </label>
-                  ))}
+            <label className="text-xs text-gray-500">Name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1"
+            />
+          </div>
+
+          {/* ── TAGS — horizontal scroll ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-gray-500">Tags</label>
+              <span className="text-xs text-gray-400">Scroll to see all ›</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {sortedTags.map(tag => (
+                <div key={tag.id} className="shrink-0">
+                  <TagPill tag={tag} selected={selectedTags.includes(tag.id)} onClick={() => toggleTag(tag.id)} />
                 </div>
               ))}
-              <label className="flex items-center gap-2 text-xs mt-1">
-                <input type="checkbox" checked={guest.rsvp.confirmed || false} onChange={() => handleRsvpToggle('confirmed')} />
-                ✅ Confirmed (shared)
-              </label>
             </div>
           </div>
-        )}
 
-        <div className="flex gap-2 pt-2">
-          <button type="button" onClick={handleSave} className="flex-1 bg-purple-500 text-white rounded-xl py-2 text-sm font-semibold">Save</button>
-          <button type="button" onClick={handleDelete} className="px-4 border border-red-300 text-red-500 rounded-xl text-sm">Delete</button>
+          {/* ── FAMILY / GROUP toggle ── */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !isGroup
+              setIsGroup(next)
+              if (!next) { setAdultCount(1); setKidCount(0); setGroupNotes('') }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors ${
+              isGroup ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'
+            }`}
+          >
+            <span className="text-base">👨‍👩‍👧</span>
+            <span className={`text-sm font-medium flex-1 text-left ${isGroup ? 'text-purple-700' : 'text-gray-600'}`}>
+              Family / Group
+            </span>
+            {/* Toggle track */}
+            <div className={`relative w-11 h-6 rounded-full transition-colors ${isGroup ? 'bg-purple-500' : 'bg-gray-300'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isGroup ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
+
+          {isGroup && (
+            <div className="flex gap-3">
+              <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                <p className="text-xs text-gray-500 mb-1">Adults</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button type="button" aria-label="−" onClick={() => setAdultCount(c => Math.max(1, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
+                  <span className="font-bold text-sm w-4 text-center">{adultCount}</span>
+                  <button type="button" aria-label="+" onClick={() => setAdultCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
+                </div>
+              </div>
+              <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                <p className="text-xs text-gray-500 mb-1">Kids</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button type="button" aria-label="−" onClick={() => setKidCount(c => Math.max(0, c - 1))} className="text-purple-500 font-bold text-lg leading-none">−</button>
+                  <span className="font-bold text-sm w-4 text-center">{kidCount}</span>
+                  <button type="button" aria-label="+" onClick={() => setKidCount(c => c + 1)} className="text-purple-500 font-bold text-lg leading-none">+</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── NOTES — collapsible ── */}
+          {notesOpen ? (
+            <div className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500">Notes</p>
+                {!groupNotes && (
+                  <button type="button" onClick={() => setNotesOpen(false)} className="text-xs text-gray-400">Remove</button>
+                )}
+              </div>
+              <textarea
+                value={groupNotes}
+                onChange={e => setGroupNotes(e.target.value)}
+                placeholder="e.g. John, Jane + 1 kid..."
+                rows={2}
+                autoFocus={!groupNotes}
+                className="w-full text-sm border-none bg-transparent resize-none focus:outline-none"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotesOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-3 rounded-xl border border-gray-200 bg-gray-50 text-left"
+            >
+              <span className="text-base">📝</span>
+              <span className="text-sm text-gray-400">Add a note...</span>
+            </button>
+          )}
+
+          {/* ── RSVP STATUS ── */}
+          {!isContributor(role) && (
+            <div>
+              <label className="text-xs text-gray-500 block mb-2">RSVP Status</label>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                {rsvpRows.map((r, i) => (
+                  <div key={r}>
+                    {i > 0 && <div className="h-px bg-gray-100" />}
+                    <div className="flex items-center gap-2 px-3 py-3">
+                      <span className="text-xs font-semibold text-gray-500 w-14 shrink-0">
+                        {r === 'hansen' ? 'Hansen' : 'Lavita'}
+                      </span>
+                      <div className="flex gap-2">
+                        {/* Save the Date — only owner's own row is interactive */}
+                        <button
+                          type="button"
+                          aria-label="saveTheDateSent"
+                          disabled={getOwnerRole(role) !== r}
+                          onClick={() => handleRsvpToggle('saveTheDateSent')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            rsvp[r]?.saveTheDateSent
+                              ? 'bg-purple-500 text-white'
+                              : getOwnerRole(role) !== r
+                                ? 'bg-gray-100 text-gray-300 cursor-default'
+                                : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+                          }`}
+                        >
+                          📅 <span>Save the Date</span>
+                        </button>
+                        {/* Invite — only owner's own row is interactive */}
+                        <button
+                          type="button"
+                          aria-label="inviteSent"
+                          disabled={getOwnerRole(role) !== r}
+                          onClick={() => handleRsvpToggle('inviteSent')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            rsvp[r]?.inviteSent
+                              ? 'bg-purple-500 text-white'
+                              : getOwnerRole(role) !== r
+                                ? 'bg-gray-100 text-gray-300 cursor-default'
+                                : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+                          }`}
+                        >
+                          ✉️ <span>Invite</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {/* Confirmed row */}
+                <div className="h-px bg-gray-100" />
+                <button
+                  type="button"
+                  onClick={() => handleRsvpToggle('confirmed')}
+                  className={`w-full flex items-center gap-2 px-3 py-3 transition-colors ${
+                    rsvp.confirmed ? 'bg-green-50' : 'bg-white'
+                  }`}
+                >
+                  <span className={`text-sm ${rsvp.confirmed ? 'opacity-100' : 'opacity-30'}`}>✅</span>
+                  <span className={`text-xs font-medium ${rsvp.confirmed ? 'text-green-700' : 'text-gray-500'}`}>
+                    Confirmed (shared)
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── WEIGHT — collapsed by default ── */}
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
+            <span className="text-sm">⚖️</span>
+            <span className="text-sm text-gray-600 flex-1">Priority weight</span>
+            {weightEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min="1" max="10"
+                  value={weightOverride ? (overrideValue ?? effectiveWeight) : effectiveWeight}
+                  onChange={e => { setOverrideValue(Number(e.target.value)); setWeightOverride(true) }}
+                  className="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-center"
+                  autoFocus
+                />
+                {weightOverride && (
+                  <button type="button" onClick={() => { setWeightOverride(false); setOverrideValue(null) }} className="text-xs text-gray-400 underline">reset</button>
+                )}
+                <button type="button" onClick={() => setWeightEditing(false)} className="text-xs text-purple-500 font-medium">Done</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">{effectiveWeight}</span>
+                <button type="button" onClick={() => setWeightEditing(true)} className="text-xs text-purple-500">Edit</button>
+              </div>
+            )}
+          </div>
+
+          {/* ── SAVE / DELETE ── */}
+          <div className="pt-2 space-y-2">
+            <button type="button" onClick={handleSave} className="w-full bg-purple-500 text-white rounded-xl py-3 text-sm font-semibold">
+              Save
+            </button>
+            <div className="flex justify-center">
+              <button type="button" onClick={handleDelete} className="text-sm text-red-400 py-1">
+                Delete guest
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
-    </BottomSheet>
+      </BottomSheet>
+
       {showUnarchivePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl p-5 mx-4 max-w-sm w-full space-y-3">

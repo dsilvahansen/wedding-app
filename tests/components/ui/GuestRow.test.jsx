@@ -35,10 +35,10 @@ describe('GuestRow', () => {
     expect(screen.getByText('8')).toBeInTheDocument()
   })
 
-  it('calls onRsvpToggle with guest id and field when RSVP icon clicked', () => {
+  it('calls onRsvpToggle with guest id and field when RSVP dot clicked', () => {
     const onRsvpToggle = vi.fn()
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={onRsvpToggle} onEdit={() => {}} />)
-    fireEvent.click(screen.getByTitle('Save the date'))
+    fireEvent.click(screen.getByTitle('STD'))
     expect(onRsvpToggle).toHaveBeenCalledWith('g1', 'saveTheDateSent')
   })
 
@@ -67,10 +67,11 @@ describe('GuestRow', () => {
     expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument()
   })
 
-  it('shows checkbox and hides RSVP icons in selectionMode', () => {
+  it('shows checkbox and read-only status dots in selectionMode', () => {
     render(<GuestRow guest={guest} tags={tags} currentRole="hansen" readOnly={false} onRsvpToggle={() => {}} onEdit={() => {}} selectionMode={true} selected={false} />)
     expect(screen.getByRole('checkbox')).toBeInTheDocument()
-    expect(screen.queryByTitle('Save the date')).not.toBeInTheDocument()
+    // Status dots are present but disabled in select mode
+    expect(screen.getByTitle('STD')).toBeDisabled()
   })
 
   it('checkbox is checked when selected=true', () => {
