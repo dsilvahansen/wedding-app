@@ -20,7 +20,7 @@ export default function Toast({ message, onDone, action }) {
         <button
           type="button"
           onClick={() => { action.onClick(); setVisible(false); onDoneRef.current?.() }}
-          className="text-purple-300 font-semibold underline"
+          className="ml-1.5 text-purple-300 font-semibold underline"
         >
           {action.label}
         </button>
