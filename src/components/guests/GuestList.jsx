@@ -21,6 +21,10 @@ export default function GuestList({ readOnly }) {
   const { selectionMode, selectedIds, toggleSelectionMode, toggleGuest, applyBulkAction, undoAvailable, undoBulkAction } = useBulkSelect()
   const [activeTag, setActiveTag] = useState(null)
   const [sortBy, setSortBy] = useState('weight')
+  const [searchQuery, setSearchQuery] = useState('')
+  // showSearch controls mobile search bar visibility in normal mode
+  // In select mode, search lives in the bottom bar and is always visible
+  const [showSearch, setShowSearch] = useState(false)
   const [editingGuest, setEditingGuest] = useState(null)
   const [addingGuest, setAddingGuest] = useState(false)
   const [pendingField, setPendingField] = useState(null)
@@ -43,8 +47,12 @@ export default function GuestList({ readOnly }) {
 
   const activeGuests = myGuests.filter(g => !g.archived)
   const archivedGuests = myGuests.filter(g => g.archived)
-  const filtered = activeTag ? activeGuests.filter(g => g.tags?.includes(activeTag)) : activeGuests
-  const sorted = sortGuests(filtered, sortBy)
+  // Apply tag filter, then name search, then sort
+  const tagFiltered = activeTag ? activeGuests.filter(g => g.tags?.includes(activeTag)) : activeGuests
+  const searched = searchQuery.trim()
+    ? tagFiltered.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : tagFiltered
+  const sorted = sortGuests(searched, sortBy)
   const listName = readOnly ? `${partnerName}'s List` : 'My List'
 
   async function handleRsvpToggle(guestId, field) {
@@ -90,9 +98,21 @@ export default function GuestList({ readOnly }) {
     }
   }
 
+  function handleToggleSelectionMode() {
+    if (!selectionMode) {
+      // Clear search when entering selection mode (search moves to bottom bar)
+      setShowSearch(false)
+      setSearchQuery('')
+    } else {
+      setShowSearch(false)
+      setSearchQuery('')
+    }
+    toggleSelectionMode()
+  }
+
   return (
     <div>
-      <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
+      <div className="sticky top-0 z-20 px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
         <span className="text-sm font-semibold text-purple-700">
           {selectionMode ? `${listName} · ${selectedIds.size} selected` : `${listName} (${sorted.reduce((sum, g) => sum + getTotalHeadcount(g), 0)})`}
         </span>
@@ -119,13 +139,44 @@ export default function GuestList({ readOnly }) {
             </button>
           )}
           {!readOnly && !isContributor(role) && (
-            <button type="button" onClick={toggleSelectionMode} className="text-xs text-purple-600 font-medium">
-              {selectionMode ? 'Done' : 'Select'}
-            </button>
+            <>
+              {/* Search icon only in normal mode on mobile — in select mode, search is in the bottom bar */}
+              {!selectionMode && (
+                <button
+                  type="button"
+                  onClick={() => setShowSearch(s => !s)}
+                  className="md:hidden text-purple-500 text-base leading-none"
+                  aria-label="Search"
+                >
+                  🔍
+                </button>
+              )}
+              <button type="button" onClick={handleToggleSelectionMode} className="text-xs text-purple-600 font-medium">
+                {selectionMode ? 'Done' : 'Select'}
+              </button>
+            </>
           )}
         </div>
       </div>
-      <FilterBar tags={tags} activeTag={activeTag} onTagChange={setActiveTag} />
+      {/* FilterBar with search — only shown in normal mode; in select mode search lives in bottom bar */}
+      {!selectionMode && (
+        <FilterBar
+          tags={tags}
+          activeTag={activeTag}
+          onTagChange={setActiveTag}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          showSearch={showSearch}
+        />
+      )}
+      {/* Tag filter pills still visible in select mode */}
+      {selectionMode && (
+        <FilterBar
+          tags={tags}
+          activeTag={activeTag}
+          onTagChange={setActiveTag}
+        />
+      )}
       {sorted.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-8">No guests yet</p>
       ) : (
@@ -146,6 +197,8 @@ export default function GuestList({ readOnly }) {
               selected={selectedIds.has(guest.id)}
               badge={selectionMode ? undefined : badge}
               onLongPress={!readOnly && !selectionMode ? () => setLongPressGuest(guest) : undefined}
+              // Suppress H/L superscript on own list; show on partner's list or combined
+              showTagInitial={readOnly}
             />
           )
         })
@@ -188,29 +241,53 @@ export default function GuestList({ readOnly }) {
           onClose={() => setEditingGuest(null)}
         />
       )}
-      {selectionMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40">
-          {pendingField ? (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600">
-                {pendingField === 'archive'
-                  ? `Archive ${selectedIds.size} guest${selectedIds.size > 1 ? 's' : ''}?`
-                  : `Mark ${fieldLabel[pendingField]} for ${selectedIds.size} guest${selectedIds.size > 1 ? 's' : ''}?`}
-              </span>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setPendingField(null)} className="text-xs text-gray-500 px-3 py-1.5 rounded-lg border border-gray-200">Cancel</button>
-                <button type="button" onClick={handleApply} className="text-xs text-white bg-purple-500 px-3 py-1.5 rounded-lg font-semibold">Apply</button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">{selectedIds.size} selected</span>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setPendingField('saveTheDateSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">📅 STD</button>
-                <button type="button" onClick={() => setPendingField('inviteSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✉️ Invite</button>
-                <button type="button" onClick={() => setPendingField('confirmed')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✅</button>
-                <button type="button" onClick={() => setPendingField('archive')} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg">📦 Archive</button>
-              </div>
+      {selectionMode && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+          {/* Search bar at top of bottom bar — always visible in select mode */}
+          <div className="px-4 pt-3 pb-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by name..."
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-400 bg-gray-50"
+            />
+          </div>
+          {/* Action buttons — only show when guests are selected */}
+          {selectedIds.size > 0 && (
+            <div className="px-4 pb-3 pt-1">
+              {(() => {
+                // Compute STD state of selected guests to show "Mark" vs "Unmark" on the button
+                const selectedGuests = sorted.filter(g => selectedIds.has(g.id))
+                const allHaveStd = selectedGuests.length > 0 && selectedGuests.every(g => g.rsvp?.[role]?.saveTheDateSent)
+                return pendingField ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">
+                      {pendingField === 'archive'
+                        ? `Archive ${selectedIds.size} guest${selectedIds.size > 1 ? 's' : ''}?`
+                        : pendingField === 'saveTheDateSent'
+                          ? `${allHaveStd ? 'Unmark' : 'Mark'} save-the-date for ${selectedIds.size} guest${selectedIds.size > 1 ? 's' : ''}?`
+                          : `Mark ${fieldLabel[pendingField]} for ${selectedIds.size} guest${selectedIds.size > 1 ? 's' : ''}?`}
+                    </span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setPendingField(null)} className="text-xs text-gray-500 px-3 py-1.5 rounded-lg border border-gray-200">Cancel</button>
+                      <button type="button" onClick={handleApply} className="text-xs text-white bg-purple-500 px-3 py-1.5 rounded-lg font-semibold">Apply</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{selectedIds.size} selected</span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setPendingField('saveTheDateSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">
+                        {allHaveStd ? '📅 Unmark STD' : '📅 STD'}
+                      </button>
+                      <button type="button" onClick={() => setPendingField('inviteSent')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✉️ Invite</button>
+                      <button type="button" onClick={() => setPendingField('confirmed')} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg">✅</button>
+                      <button type="button" onClick={() => setPendingField('archive')} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg">📦</button>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
