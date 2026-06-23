@@ -40,9 +40,7 @@ export default function GuestList({ readOnly }) {
   // My List shows current user's guests; Their List shows partner's
   const myOwnerRole = getOwnerRole(role)
   const myGuests = myOwnerRole ? guests.filter(g => {
-    // New guests have ownerRole; legacy guests fall back to ownerId
-    const guestSide = g.ownerRole ?? (g.ownerId === user?.uid ? myOwnerRole : (myOwnerRole === 'hansen' ? 'lavita' : 'hansen'))
-    return readOnly ? guestSide !== myOwnerRole : guestSide === myOwnerRole
+    return readOnly ? g.ownerRole !== myOwnerRole : g.ownerRole === myOwnerRole
   }) : []
 
   const activeGuests = myGuests.filter(g => !g.archived)
