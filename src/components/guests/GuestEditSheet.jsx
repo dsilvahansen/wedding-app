@@ -25,9 +25,6 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
   if (!guest) return null
 
   const guestOwnerRole = guest?.ownerRole
-    ?? (guest?.ownerId === userId
-      ? (getOwnerRole(role) ?? 'hansen')
-      : (getOwnerRole(role) === 'hansen' ? 'lavita' : 'hansen'))
 
   const rsvpRows = guest?.shared ? ['hansen', 'lavita'] : [guestOwnerRole]
 
