@@ -14,6 +14,8 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-10">
       {items.map(item => {
+        // startsWith catches all /guests/* sub-routes; the '/' special case
+        // prevents the Home item from matching every path that starts with '/'.
         const active = item.path && location.pathname.startsWith(item.path) &&
           (item.path === '/' ? location.pathname === '/' : true)
         return (

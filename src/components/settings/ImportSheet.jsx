@@ -26,7 +26,10 @@ export default function ImportSheet({ file, guests, tags, userId, onClose, onSuc
     parseWorkbookFromFile(file)
       .then(({ guestRows, tagRows }) => {
         const tagResult = sheetDataToTags(tagRows, tags, userId)
-        // Merge existing + to-be-created tags so guest rows can resolve tag names
+        // Assign synthetic `__new_<index>` IDs to tags that will be created so
+        // that sheetDataToGuests can resolve them by name during preview — before
+        // real Firestore IDs exist. These placeholders are replaced with actual
+        // IDs during the commit step (handleConfirm).
         const mergedTags = [
           ...tags,
           ...tagResult.toCreate.map((t, i) => ({ ...t, id: `__new_${i}` })),
@@ -43,6 +46,14 @@ export default function ImportSheet({ file, guests, tags, userId, onClose, onSuc
     try {
       const { tagResult, guestResult } = preview
       const batch = writeBatch(db)
+
+      // Commit order matters:
+      //   1. Create tags → generate real Firestore IDs
+      //   2. Update tags
+      //   3. Build name→realId map to replace __new_ placeholders in guest tag arrays
+      //   4. Batch-set new guests (with resolved tag IDs)
+      //   5. Batch-update existing guests (with resolved tag IDs)
+      // Everything goes into a single writeBatch so it's atomic.
 
       // 1. Create new tags
       const newTagIds = {}

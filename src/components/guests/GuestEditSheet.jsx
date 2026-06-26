@@ -26,6 +26,8 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
 
   const guestOwnerRole = guest?.ownerRole
 
+  // rsvpRows determines which owner rows to render in the RSVP table:
+  // shared guests show both Hansen and Lavita rows; non-shared guests show only their owner.
   const rsvpRows = guest?.shared ? ['hansen', 'lavita'] : [guestOwnerRole]
 
   const effectiveWeight = calcWeight(selectedTags, userId, tags, weightOverride, overrideValue)
@@ -74,8 +76,11 @@ export default function GuestEditSheet({ guest, tags, userId, role, open, onClos
     if (field === 'confirmed') {
       updated.confirmed = !rsvp.confirmed
     } else {
+      // Only the current user's owner slot is writable; confirmed is shared.
       updated[getOwnerRole(role)] = { ...rsvp[getOwnerRole(role)], [field]: !rsvp[getOwnerRole(role)]?.[field] }
     }
+    // Optimistic update: apply locally first so the UI reflects the change
+    // immediately without waiting for the Firestore round-trip.
     setRsvp(updated)
     try {
       await updateDoc(doc(db, 'guests', guest.id), { rsvp: updated, updatedAt: serverTimestamp() })

@@ -37,7 +37,8 @@ export default function GuestList({ readOnly }) {
   const partnerRole = role === 'hansen' ? 'lavita' : 'hansen'
   const partnerName = role === 'hansen' ? 'Lavita' : 'Hansen'
 
-  // My List shows current user's guests; Their List shows partner's
+  // myOwnerRole is 'hansen' or 'lavita' based on the logged-in user's role.
+  // readOnly=false → show my guests; readOnly=true → show partner's guests.
   const myOwnerRole = getOwnerRole(role)
   const myGuests = myOwnerRole ? guests.filter(g => {
     return readOnly ? g.ownerRole !== myOwnerRole : g.ownerRole === myOwnerRole
@@ -74,6 +75,8 @@ export default function GuestList({ readOnly }) {
   async function handleApply() {
     if (!pendingField) return
     const count = selectedIds.size
+    // Archive is handled inline (not via useBulkSelect) because it's a document
+    // field rather than a nested rsvp field, and it doesn't support undo.
     if (pendingField === 'archive') {
       try {
         const selected = [...selectedIds]

@@ -41,8 +41,12 @@ export default function AddGuest() {
     setSuggestionsExpanded(false)
     if (val.length < 2) { setSuggestions([]); setDuplicateWarning(null); return }
     const lower = val.toLowerCase()
+    // Live typeahead across all guests (both users) so the user can spot
+    // an existing entry before saving.
     const matches = guests.filter(g => g.name.toLowerCase().includes(lower))
     setSuggestions(matches)
+    // Separate duplicate detection: looks specifically for same-name guests
+    // owned by the *other* user, prompting a link offer if found.
     const dups = findDuplicates(val, user?.uid, guests)
     setDuplicateWarning(dups.length > 0 ? dups[0] : null)
   }
@@ -57,6 +61,8 @@ export default function AddGuest() {
   async function handleSave() {
     if (!name.trim()) return
     try {
+      // isGroup: true → include headcount fields; false → omit adultCount/kidCount
+      // (groupNotes is preserved even for non-groups so it can be kept as a plain note)
       const groupFields = isGroup
         ? { isGroup: true, adultCount, kidCount, groupNotes }
         : { groupNotes }
@@ -69,6 +75,7 @@ export default function AddGuest() {
         tags: selectedTags,
         weight: effectiveWeight,
         weightOverride,
+        // linkedGuestId links to the same person in the partner's list (set via duplicate prompt)
         linkedGuestId: linkedGuestId || null,
         ...groupFields,
         rsvp: {

@@ -28,6 +28,8 @@ export default function CombinedList() {
   const sharedCount = combined.filter(g => g.shared).length
 
   let filtered = combined
+  // Owner filters: 'all' = no filter; 'hansen'/'lavita' = guests owned by that side;
+  // 'shared' = guests that appear on both lists (linked or name-matched).
   if (filterOwner === 'hansen') filtered = combined.filter(g => g.owners.some(id => id === user?.uid))
   if (filterOwner === 'lavita') filtered = combined.filter(g => g.owners.some(id => id !== user?.uid))
   if (filterOwner === 'shared') filtered = combined.filter(g => g.shared)
@@ -66,10 +68,12 @@ export default function CombinedList() {
   }
 
   function getBadge(entry) {
+    // Shared guests (on both lists) get a gold star badge.
     if (entry.shared) return { label: '★', style: { backgroundColor: '#f39c12', color: '#fff' } }
     const myOwnerRole = getOwnerRole(role)
     if (!myOwnerRole) return undefined
     const entryOwnerRole = entry.ownerRole
+    // 'H' or 'L' badge indicates which side owns the guest, colored to distinguish.
     const isMyGuest = entryOwnerRole === myOwnerRole
     const label = isMyGuest ? (myOwnerRole === 'hansen' ? 'H' : 'L') : (myOwnerRole === 'hansen' ? 'L' : 'H')
     const style = isMyGuest

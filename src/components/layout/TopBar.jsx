@@ -13,6 +13,8 @@ export default function TopBar({ title, guests = [], tags = [] }) {
 
   function handleImportSuccess({ added, updated, tagsCreated, tagsUpdated }) {
     setImportFile(null)
+    // Build a compact summary string, skipping categories that had no changes.
+    // e.g. "Imported: 3 added, 1 updated · 2 tags created, 0 updated"
     const parts = []
     if (added || updated) parts.push(`${added} added, ${updated} updated`)
     if (tagsCreated || tagsUpdated) parts.push(`${tagsCreated} tags created, ${tagsUpdated} updated`)

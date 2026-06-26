@@ -35,23 +35,27 @@ export function useBulkSelect() {
     if (selected.length === 0) return
 
     const isConfirmed = field === 'confirmed'
+    // Toggle-all semantics: if every selected guest already has the field true,
+    // set all to false; otherwise set all to true.
     const allTrue = selected.every(g =>
       isConfirmed ? g.rsvp?.confirmed : g.rsvp?.[role]?.[field]
     )
     const newValue = !allTrue
 
-    // Snapshot for undo
+    // Capture previous values before writing — enables undo within 4 seconds.
     snapshotRef.current = selected.map(g => ({
       guestId: g.id,
       field,
       previousValue: isConfirmed ? (g.rsvp?.confirmed ?? false) : (g.rsvp?.[role]?.[field] ?? false),
     }))
 
+    // `confirmed` lives at rsvp.confirmed (shared); all other fields at rsvp.<role>.<field>
+    const fieldPath = isConfirmed ? 'rsvp.confirmed' : `rsvp.${role}.${field}`
+
     try {
-      await Promise.all(selected.map(g => {
-        const fieldPath = isConfirmed ? 'rsvp.confirmed' : `rsvp.${role}.${field}`
-        return updateDoc(doc(db, 'guests', g.id), { [fieldPath]: newValue, updatedAt: serverTimestamp() })
-      }))
+      await Promise.all(selected.map(g =>
+        updateDoc(doc(db, 'guests', g.id), { [fieldPath]: newValue, updatedAt: serverTimestamp() })
+      ))
 
       clearTimeout(undoTimerRef.current)
       setUndoAvailable(true)
@@ -73,6 +77,7 @@ export function useBulkSelect() {
     setUndoAvailable(false)
     setUndoMessage('')
 
+    // Restore each guest to its pre-action value using the snapshot taken in applyBulkAction.
     try {
       await Promise.all(snapshot.map(({ guestId, field, previousValue }) => {
         const guest = guests.find(g => g.id === guestId)

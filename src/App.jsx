@@ -4,6 +4,11 @@ import LoginPage from './pages/LoginPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import GuestsPage from './pages/GuestsPage.jsx'
 
+/**
+ * Guards a route: shows a loading spinner while Firebase resolves the auth
+ * state, redirects unauthenticated users to /login, and renders children once
+ * a user is confirmed. Uses `replace` so the login page doesn't stack in history.
+ */
 function RequireAuth({ children }) {
   const { user, loading } = useAuthContext()
   if (loading) return <div className="min-h-screen flex items-center justify-center text-purple-500">Loading...</div>
