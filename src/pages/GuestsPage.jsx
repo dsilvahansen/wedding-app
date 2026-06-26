@@ -5,6 +5,8 @@ import ModuleLayout from '../components/layout/ModuleLayout.jsx'
 import GuestList from '../components/guests/GuestList.jsx'
 import CombinedList from '../components/guests/CombinedList.jsx'
 import TagsManager from '../components/guests/TagsManager.jsx'
+import { useGuests } from '../hooks/useGuests.js'
+import { useTags } from '../hooks/useTags.js'
 
 const TABS = [
   { path: '/guests/list', icon: '👥', label: 'My List' },
@@ -14,9 +16,12 @@ const TABS = [
 ]
 
 export default function GuestsPage() {
+  const guests = useGuests()
+  const tags = useTags()
+
   return (
     <div className="h-screen flex flex-col">
-      <TopBar title="Guest List" />
+      <TopBar title="Guest List" guests={guests} tags={tags} />
       <div className="flex-1 flex flex-col overflow-hidden">
       <ModuleLayout tabs={TABS}>
         <Routes>
